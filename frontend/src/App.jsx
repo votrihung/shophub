@@ -14,7 +14,7 @@ function App() {
       <Banner />
       
       {/* 3. Gọi danh sách 10 sản phẩm vừa cấu trúc lại bằng Card hiện ra ở đây */}
-      {/* <ProductList /> */}
+      <ProductList />
       
       {/* 4. Hiện thanh Footer dưới đáy trang web */}
       <Footer />
