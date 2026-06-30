@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "name": "Gaming Laptop",
+    "price": 1500,
+    "category": "Electronics",
+    "imageUrl": "https://picsum.photos/id/1/150",
+    "description": "High performance laptop for gaming and work."
+  },
+  {
+    "id": 2,
+    "name": "Wireless Mouse",
+    "price": 25,
+    "category": "Accessories",
+    "imageUrl": "https://picsum.photos/id/2/150",
+    "description": "Comfortable mouse with long battery life."
+  },
+  {
+    "id": 3,
+    "name": "Mechanical Keyboard",
+    "price": 90,
+    "category": "Accessories",
+    "imageUrl": "https://picsum.photos/id/3/150",
+    "description": "Tactile RGB mechanical keyboard for fast typing."
+  },
+  {
+    "id": 4,
+    "name": "Noise Cancelling Headphones",
+    "price": 200,
+    "category": "Audio",
+    "imageUrl": "https://picsum.photos/id/4/150",
+    "description": "Immersive sound quality with active noise cancellation."
+  },
+  {
+    "id": 5,
+    "name": "4K Ultra HD Monitor",
+    "price": 350,
+    "category": "Electronics",
+    "imageUrl": "https://picsum.photos/id/5/150",
+    "description": "Stunning 27-inch 4K display with vibrant colors."
+  },
+  {
+    "id": 6,
+    "name": "Smart Watch",
+    "price": 180,
+    "category": "Wearables",
+    "imageUrl": "https://picsum.photos/id/6/150",
+    "description": "Track your fitness, heart rate, and notifications daily."
+  },
+  {
+    "id": 7,
+    "name": "Bluetooth Speaker",
+    "price": 45,
+    "category": "Audio",
+    "imageUrl": "https://picsum.photos/id/7/150",
+    "description": "Portable waterproof speaker with deep bass."
+  },
+  {
+    "id": 8,
+    "name": "External SSD 1TB",
+    "price": 110,
+    "category": "Electronics",
+    "imageUrl": "https://picsum.photos/id/8/150",
+    "description": "Ultra-fast external solid state drive for data backup."
+  },
+  {
+    "id": 9,
+    "name": "HD Webcam",
+    "price": 60,
+    "category": "Accessories",
+    "imageUrl": "https://picsum.photos/id/9/150",
+    "description": "1080p webcam perfect for video calls and streaming."
+  },
+  {
+    "id": 10,
+    "name": "Wireless Charging Pad",
+    "price": 30,
+    "category": "Accessories",
+    "imageUrl": "https://picsum.photos/id/10/150",
+    "description": "Fast wireless charging station for smartphones and earbuds."
+  }
+]
