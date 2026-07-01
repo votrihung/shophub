@@ -1,29 +1,63 @@
 import React from 'react';
 
-// Sử dụng Props (product) truyền từ component cha xuống
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, quantity, onIncrease, onDecrease }) => {
   return (
     <div style={{
-      border: '1px solid #ddd',
-      padding: '15px',
+      border: '1px solid #e0e0e0',
       borderRadius: '8px',
-      backgroundColor: '#fff',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-      width: '220px',
-      textAlign: 'center'
+      padding: '15px',
+      textAlign: 'center',
+      backgroundColor: '#ffffff',
+      boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+      fontFamily: 'Arial, sans-serif'
     }}>
+      {/* Hình ảnh sản phẩm */}
       <img 
-        src={product.imageUrl} 
+        src={product.image} 
         alt={product.name} 
-        style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px' }} 
+        style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }} 
       />
-      <h3 style={{ fontSize: '16px', margin: '10px 0' }}>{product.name}</h3>
-      <p style={{ color: '#ff5722', fontWeight: 'bold', fontSize: '18px', margin: '5px 0' }}>
-        ${product.price}
-      </p>
-      <p style={{ fontSize: '12px', color: '#666', height: '40px', overflow: 'hidden' }}>
-        {product.description}
-      </p>
+      
+      {/* Tên và Giá */}
+      <h4 style={{ margin: '10px 0 5px 0', fontSize: '16px', color: '#2c3e50' }}>{product.name}</h4>
+      <p style={{ margin: '0 0 15px 0', fontWeight: 'bold', color: '#e74c3c' }}>${product.price}</p>
+      
+      {/* Khu vực tăng giảm số lượng */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px' }}>
+        <button 
+          onClick={onDecrease}
+          style={{
+            width: '30px',
+            height: '30px',
+            borderRadius: '50%',
+            border: '1px solid #bdc3c7',
+            backgroundColor: '#ffffff',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          -
+        </button>
+        
+        <span style={{ fontSize: '16px', fontWeight: 'bold', minWidth: '20px' }}>{quantity}</span>
+        
+        <button 
+          onClick={onIncrease}
+          style={{
+            width: '30px',
+            height: '30px',
+            borderRadius: '50%',
+            border: '1px solid #bdc3c7',
+            backgroundColor: '#ffffff',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 };
