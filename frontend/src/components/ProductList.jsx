@@ -1,66 +1,109 @@
-import React, { useState } from 'react';
-import productsData from '../data/products.json';
+import React, { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 
 const ProductList = () => {
-  // FIX: Khởi tạo số lượng ban đầu của tất cả sản phẩm bằng 0 thay vì 1
-  const [quantities, setQuantities] = useState(
-    productsData.reduce((acc, product) => {
-      acc[product.id] = 0;
-      return acc;
-    }, {})
-  );
+  const [products, setProducts] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Tăng số lượng
+  useEffect(() => {
+    // GIẢ LẬP ĐỘ TRỄ 1 GIÂY ĐỂ HIỂN THỊ HIỆU ỨNG LOADING THEO YÊU CẦU BÀI HỌC
+    const timer = setTimeout(() => {
+      fetch('/src/data/products.json')
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Không thể đọc dữ liệu từ file cấu hình hệ thống');
+          }
+          return response.json();
+        })
+        .then((data) => {
+          setProducts(data);
+          setQuantities(
+            data.reduce((acc, product) => {
+              acc[product.id] = 0;
+              return acc;
+            }, {})
+          );
+          setLoading(false); // Tắt loading sau khi đã lấy xong dữ liệu
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
+    }, 1000); // Đợi đúng 1000 mili-giây (1 giây) rồi mới load dữ liệu
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleIncrease = (id) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: prev[id] + 1
-    }));
+    setQuantities(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
   };
 
-  // FIX: Cho phép giảm số lượng về tối thiểu là 0 (không bị chặn ở số 1 nữa)
   const handleDecrease = (id) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: prev[id] > 0 ? prev[id] - 1 : 0
-    }));
+    setQuantities(prev => ({ ...prev, [id]: (prev[id] || 0) > 0 ? prev[id] - 1 : 0 }));
   };
 
-  // Tính tổng số lượng hàng trong giỏ
   const totalItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
-
-  // Tính tổng số tiền phải trả
-  const totalPrice = productsData.reduce((sum, product) => {
-    return sum + (product.price * quantities[product.id]);
+  const totalPrice = products.reduce((sum, product) => {
+    return sum + (product.price * (quantities[product.id] || 0));
   }, 0);
+
+  const formatVND = (price) => {
+    return price.toLocaleString('vi-VN') + 'đ';
+  };
+
+  // MÀN HÌNH CHỜ LOADING XỊN MỊN CỦA SESSION 4
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '80vh', 
+        fontSize: '24px', 
+        fontFamily: 'Arial, sans-serif',
+        fontWeight: 'bold',
+        color: '#3498db'
+      }}>
+        ⏳ Đang tải danh sách máy tính từ API...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '100px 50px', color: '#e74c3c', fontSize: '20px', fontFamily: 'Arial, sans-serif' }}>
+        ❌ Lỗi: {error}. Vui lòng kiểm tra lại đường dẫn file dữ liệu!
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '30px 40px', fontFamily: 'Arial, sans-serif' }}>
-      <h2 style={{ marginBottom: '20px', color: '#2c3e50' }}>Our Products</h2>
+      <h2 style={{ marginBottom: '20px', color: '#2c3e50' }}>Danh Sách Máy Tính Công Nghệ (Session 4 API)</h2>
       
-      {/* Layout chia 2 bên */}
       <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
         
-        {/* BÊN TRÁI: Danh sách 9 sản phẩm */}
+        {/* BÊN TRÁI: Danh sách sản phẩm máy tính gốc */}
         <div style={{
           flex: 3,
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
           gap: '20px'
         }}>
-          {productsData.map(product => (
+          {products.map(product => (
             <ProductCard 
               key={product.id}
               product={product}
-              quantity={quantities[product.id]}
+              quantity={quantities[product.id] || 0}
               onIncrease={() => handleIncrease(product.id)}
               onDecrease={() => handleDecrease(product.id)}
             />
           ))}
         </div>
 
-        {/* BÊN PHẢI: Bảng tính tiền tổng hóa đơn */}
+        {/* BÊN PHẢI: Tóm tắt đơn hàng */}
         <div style={{
           flex: 1,
           border: '1px solid #3498db',
@@ -72,15 +115,33 @@ const ProductList = () => {
           top: '20px'
         }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#2980b9', borderBottom: '2px solid #3498db', paddingBottom: '10px' }}>
-            🛒 Order Summary
+            🛒 Tóm tắt đơn hàng
           </h3>
+
+          {totalItems === 0 ? (
+            <p style={{ color: '#7f8c8d', fontSize: '14px' }}>Giỏ hàng đang trống.</p>
+          ) : (
+            <div style={{ marginBottom: '15px', maxHeight: '200px', overflowY: 'auto' }}>
+              {products.filter(p => quantities[p.id] > 0).map(product => (
+                <div key={product.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px' }}>
+                  <span style={{ flex: 1, marginRight: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {product.name}
+                  </span>
+                  <span style={{ fontWeight: 'bold' }}>x{quantities[product.id]}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <hr style={{ border: '0', borderTop: '1px solid #e0e0e0', margin: '15px 0' }} />
+          
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span>Total Items:</span>
+            <span>Tổng sản phẩm:</span>
             <span style={{ fontWeight: 'bold' }}>{totalItems}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', marginBottom: '20px' }}>
-            <span>Total Price:</span>
-            <span style={{ fontWeight: 'bold', color: '#e74c3c' }}>${totalPrice}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', marginBottom: '20px' }}>
+            <span>Tổng thanh toán:</span>
+            <span style={{ fontWeight: 'bold', color: '#e74c3c' }}>{formatVND(totalPrice)}</span>
           </div>
           <button style={{
             width: '100%',
@@ -93,7 +154,7 @@ const ProductList = () => {
             borderRadius: '5px',
             cursor: 'pointer'
           }}>
-            Proceed to Checkout
+            Tiến Hành Thanh Toán
           </button>
         </div>
 
