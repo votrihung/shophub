@@ -1,25 +1,93 @@
-import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Banner from './components/Banner';
-import ProductList from './components/ProductList'; // Thêm dòng này để import danh sách sản phẩm
+import ProductPage from './pages/ProductPage';
+import ProductDetailPage from './pages/ProductDetailPage';
 import Footer from './components/Footer';
 
-function App() {
+// 1. Trang chủ (HomePage)
+const HomePage = () => {
+  const studentName = 'Tri Hung';
   return (
-    <div style={{ margin: 0, padding: 0, boxSizing: 'border-box' }}>
-      {/* 1. Hiện thanh Header lên trên cùng */}
-      <Header />
-      
-      {/* 2. Hiện thanh Banner quảng cáo ở giữa */}
-      <Banner />
-      
-      {/* 3. Gọi danh sách 10 sản phẩm vừa cấu trúc lại bằng Card hiện ra ở đây */}
-      <ProductList />
-      
-      {/* 4. Hiện thanh Footer dưới đáy trang web */}
-      <Footer />
-    </div>
+    <>
+      <Banner subtitle="Welcome to our store" buttonText="Shop Now" />
+      <section style={{ padding: '24px' }}>
+        <h2>Welcome to ShopHub</h2>
+        <p>Use the navigation bar to browse products, manage your cart, and log in.</p>
+      </section>
+      <Footer studentName={studentName} courseName="Full-Stack Web Development" />
+    </>
   );
-}
+};
+
+// 2. Trang giới thiệu (AboutPage)
+const AboutPage = () => (
+  <section style={{ padding: '24px' }}>
+    <h2>About Us</h2>
+    <p>This is a simple About page implemented for Session 5 Lab.</p>
+  </section>
+);
+
+// 3. Trang giỏ hàng (CartPage)
+const CartPage = () => (
+  <section style={{ padding: '24px' }}>
+    <h2>Shopping Cart</h2>
+    <p>Cart functionality will be implemented in a later session.</p>
+  </section>
+);
+
+// 4. Trang đăng nhập (LoginPage)
+const LoginPage = () => (
+  <section style={{ padding: '24px' }}>
+    <h2>Login</h2>
+    <p>Authentication will be implemented in the Auth sessions.</p>
+  </section>
+);
+
+const App = () => {
+  const studentName = 'Tri Hung';
+
+  return (
+    <>
+      {/* Đặt Header ở đây để nó nằm gọn trong BrowserRouter quản lý */}
+      <Header title="ShopHub" />
+      
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/products"
+          element={
+            <>
+              <ProductPage />
+              <Footer studentName={studentName} courseName="Full-Stack Web Development" />
+            </>
+          }
+        />
+        <Route
+          path="/products/:id"
+          element={
+            <>
+              <ProductDetailPage />
+              <Footer studentName={studentName} courseName="Full-Stack Web Development" />
+            </>
+          }
+        />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        {/* Trang 404 */}
+        <Route
+          path="*"
+          element={
+            <section style={{ padding: '24px' }}>
+              <h2>Page not found</h2>
+              <p>The page you are looking for does not exist.</p>
+            </section>
+          }
+        />
+      </Routes>
+    </>
+  );
+};
 
 export default App;

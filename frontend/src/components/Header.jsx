@@ -1,62 +1,31 @@
-import React from 'react';
+import { NavLink } from 'react-router-dom';
 
-const Header = () => {
+const Header = ({ title }) => {
+  const navItems = [
+    { label: 'Home', to: '/' },
+    { label: 'Products', to: '/products' },
+    { label: 'About', to: '/about' }, // Thêm trang About theo yêu cầu bài Lab
+    { label: 'Cart', to: '/cart' },
+    { label: 'Login', to: '/login' },
+  ];
+
+  const linkStyle = ({ isActive }) => ({
+    marginRight: '12px',
+    textDecoration: 'none',
+    color: isActive ? '#1976d2' : '#555',
+    fontWeight: isActive ? 'bold' : 'normal',
+  });
+
   return (
-    <header style={{
-      backgroundColor: '#1a252f',
-      color: '#ffffff',
-      padding: '15px 30px',
-      display: 'flex',
-      justifyContent: 'between',
-      alignItems: 'center',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      {/* 1. Bên trái: Logo ShopHub */}
-      <div style={{ fontSize: '24px', fontWeight: 'bold', flex: 1 }}>
-        🛍️ ShopHub
-      </div>
-
-      {/* 2. Ở giữa: Thanh tìm kiếm (Search Bar) */}
-      <div style={{ flex: 2, textAlign: 'center' }}>
-        <input 
-          type="text" 
-          placeholder="Search product..." 
-          style={{
-            width: '60%',
-            padding: '8px 15px',
-            borderRadius: '20px',
-            border: 'none',
-            outline: 'none',
-            fontSize: '14px'
-          }} 
-        />
-      </div>
-
-      {/* 3. Bên phải: Nút Giỏ hàng và Avatar */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '20px' }}>
-        <button style={{
-          background: 'none',
-          border: 'none',
-          color: '#fff',
-          fontSize: '18px',
-          cursor: 'pointer'
-        }}>
-          🛒 Cart
-        </button>
-        <div style={{
-          width: '35px',
-          height: '35px',
-          borderRadius: '50%',
-          backgroundColor: '#3498db',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-          fontSize: '14px'
-        }}>
-          U
-        </div>
-      </div>
+    <header style={{ padding: '16px 24px', borderBottom: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <h1 style={{ margin: 0 }}>{title}</h1>
+      <nav>
+        {navItems.map((item) => (
+          <NavLink key={item.to} to={item.to} style={linkStyle}>
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
     </header>
   );
 };
