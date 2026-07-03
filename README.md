@@ -1,8 +1,9 @@
 THÔNG TIN NHÓM
 
 Thành viên 1: Võ Quốc Trí Hùng - 2200006625
-Thành viên 2: Duy Linh
-Thành viên 3: Minh
+Thành viên 2: Nguyễn Duy Linh - 2200000578
+Thành viên 3: Đỗ Thành Minh - 2200001483
+Thành viên 4: Trần Gia Phú - 2200007007
 ---
 
 NHẬT KÝ DỰ ÁN
