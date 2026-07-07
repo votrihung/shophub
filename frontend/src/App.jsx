@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Banner from './components/Banner';
+import ProductList from './components/ProductList'; // CHÈN THÊM DÒNG NÀY ĐỂ LẤY DATA THẬT API
 import ProductPage from './pages/ProductPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import Footer from './components/Footer';
@@ -58,7 +59,8 @@ const App = () => {
           path="/products"
           element={
             <>
-              <ProductPage />
+              {/* ĐÃ ĐỔI TỪ PRODUCTPAGE SANG PRODUCTLIST ĐỂ GỌI API BACKEND AXIOS */}
+              <ProductList />  
               <Footer studentName={studentName} courseName="Full-Stack Web Development" />
             </>
           }

@@ -3,7 +3,7 @@ import React from 'react';
 const ProductCard = ({ product, quantity, onIncrease, onDecrease }) => {
   // Hàm định dạng tiền Việt Nam chuẩn mẫu: 24.990.000đ
   const formatVND = (price) => {
-    return price.toLocaleString('vi-VN') + 'đ';
+    return price ? price.toLocaleString('vi-VN') + 'đ' : '0đ';
   };
 
   return (
@@ -21,9 +21,9 @@ const ProductCard = ({ product, quantity, onIncrease, onDecrease }) => {
       height: '380px' // Tăng nhẹ chiều cao để chứa phần mô tả
     }}>
       <div>
-        {/* Hình ảnh sản phẩm */}
+        {/* Hình ảnh sản phẩm - ĐÃ ĐỔI TỪ product.image SANG product.imageUrl */}
         <img 
-          src={product.image} 
+          src={product.imageUrl} 
           alt={product.name} 
           style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }} 
         />

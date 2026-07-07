@@ -1,0 +1,22 @@
+[
+    {
+        "id": 1,
+        "name": "iphone 15",
+        "description": "Hàng chính hãng VN/A",
+        "price": 30000000.0,
+        "costPrice": 25000000.0,
+        "category": "Điện thoại",
+        "stock": 10,
+        "imageUrl": "http://localhost:8000/images/4184df72-b924-408c-a46c-a6b2fcdbf1eb.jpg"
+    },
+    {
+        "id": 5,
+        "name": "Iphone 16 promax",
+        "description": "Hàng chính hãng VN/A",
+        "price": 200000000.0,
+        "costPrice": 150000000.0,
+        "category": "điện thoại",
+        "stock": 10,
+        "imageUrl": "http://localhost:8000/images/22ff51ae-3f24-47e1-a770-5434097ea664.webp"
+    }
+]

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import ProductCard from './ProductCard';
 
 const ProductList = () => {
@@ -8,32 +9,26 @@ const ProductList = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // GIẢ LẬP ĐỘ TRỄ 1 GIÂY ĐỂ HIỂN THỊ HIỆU ỨNG LOADING THEO YÊU CẦU BÀI HỌC
-    const timer = setTimeout(() => {
-      fetch('/src/data/products.json')
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error('Không thể đọc dữ liệu từ file cấu hình hệ thống');
-          }
-          return response.json();
-        })
-        .then((data) => {
-          setProducts(data);
-          setQuantities(
-            data.reduce((acc, product) => {
-              acc[product.id] = 0;
-              return acc;
-            }, {})
-          );
-          setLoading(false); // Tắt loading sau khi đã lấy xong dữ liệu
-        })
-        .catch((err) => {
-          setError(err.message);
-          setLoading(false);
-        });
-    }, 1000); // Đợi đúng 1000 mili-giây (1 giây) rồi mới load dữ liệu
-
-    return () => clearTimeout(timer);
+    // Gọi API bốc dữ liệu trực tiếp từ Backend FastAPI
+    axios.get('http://localhost:8000/products')
+      .then((response) => {
+        // Vì API trả về Object { total, page, size, products } nên ta lấy đúng mảng response.data.products
+        const productData = response.data.products || [];
+        
+        setProducts(productData);
+        setQuantities(
+          productData.reduce((acc, product) => {
+            acc[product.id] = 0;
+            return acc;
+          }, {})
+        );
+        setLoading(false); // Tắt màn hình loading
+      })
+      .catch((err) => {
+        console.error("Lỗi kết nối API:", err);
+        setError("Không thể kết nối đến máy chủ Backend (FastAPI). Bác nhớ bật server uvicorn chưa?");
+        setLoading(false);
+      });
   }, []);
 
   const handleIncrease = (id) => {
@@ -53,7 +48,7 @@ const ProductList = () => {
     return price.toLocaleString('vi-VN') + 'đ';
   };
 
-  // MÀN HÌNH CHỜ LOADING XỊN MỊN CỦA SESSION 4
+  // MÀN HÌNH CHỜ LOADING XỊN MỊN
   if (loading) {
     return (
       <div style={{ 
@@ -66,7 +61,7 @@ const ProductList = () => {
         fontWeight: 'bold',
         color: '#3498db'
       }}>
-        ⏳ Đang tải danh sách máy tính từ API...
+        ⏳ Đang kết nối server và tải danh sách sản phẩm ShopHub...
       </div>
     );
   }
@@ -74,33 +69,37 @@ const ProductList = () => {
   if (error) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 50px', color: '#e74c3c', fontSize: '20px', fontFamily: 'Arial, sans-serif' }}>
-        ❌ Lỗi: {error}. Vui lòng kiểm tra lại đường dẫn file dữ liệu!
+        ❌ Lỗi: {error}
       </div>
     );
   }
 
   return (
     <div style={{ padding: '30px 40px', fontFamily: 'Arial, sans-serif' }}>
-      <h2 style={{ marginBottom: '20px', color: '#2c3e50' }}>Danh Sách Máy Tính Công Nghệ (Session 4 API)</h2>
+      <h2 style={{ marginBottom: '20px', color: '#2c3e50' }}>Danh Sách Sản Phẩm Hệ Thống (Dữ Liệu Thật)</h2>
       
       <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
         
-        {/* BÊN TRÁI: Danh sách sản phẩm máy tính gốc */}
+        {/* BÊN TRÁI: Danh sách sản phẩm bốc từ Backend */}
         <div style={{
           flex: 3,
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
           gap: '20px'
         }}>
-          {products.map(product => (
-            <ProductCard 
-              key={product.id}
-              product={product}
-              quantity={quantities[product.id] || 0}
-              onIncrease={() => handleIncrease(product.id)}
-              onDecrease={() => handleDecrease(product.id)}
-            />
-          ))}
+          {products.length === 0 ? (
+            <p style={{ color: '#7f8c8d' }}>Chưa có sản phẩm nào trong hệ thống. Bác ra Swagger thêm thử nhé!</p>
+          ) : (
+            products.map(product => (
+              <ProductCard 
+                key={product.id}
+                product={product}
+                quantity={quantities[product.id] || 0}
+                onIncrease={() => handleIncrease(product.id)}
+                onDecrease={() => handleDecrease(product.id)}
+              />
+            ))
+          )}
         </div>
 
         {/* BÊN PHẢI: Tóm tắt đơn hàng */}
