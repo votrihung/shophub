@@ -1,15 +1,5 @@
 [
     {
-        "id": 1,
-        "name": "iphone 15",
-        "description": "Hàng chính hãng VN/A",
-        "price": 30000000.0,
-        "costPrice": 25000000.0,
-        "category": "Điện thoại",
-        "stock": 10,
-        "imageUrl": "http://localhost:8000/images/4184df72-b924-408c-a46c-a6b2fcdbf1eb.jpg"
-    },
-    {
         "id": 5,
         "name": "Iphone 16 promax",
         "description": "Hàng chính hãng VN/A",
@@ -18,5 +8,55 @@
         "category": "điện thoại",
         "stock": 10,
         "imageUrl": "http://localhost:8000/images/22ff51ae-3f24-47e1-a770-5434097ea664.webp"
+    },
+    {
+        "id": 6,
+        "name": "iPhone  Pro Max",
+        "description": "Hàng chính hãng VN/A",
+        "price": 35000000.0,
+        "costPrice": 30000000.0,
+        "category": "Điện thoại",
+        "stock": 15,
+        "imageUrl": "http://localhost:8000/images/180e5584-e291-49ab-858c-85e0747a4b94.webp"
+    },
+    {
+        "id": 7,
+        "name": "iphone 17 promax",
+        "description": "hàng V/N ",
+        "price": 2000000.0,
+        "costPrice": 1500000.0,
+        "category": "Điện Thoại",
+        "stock": 10,
+        "imageUrl": "http://localhost:8000/images/373ee437-8e42-47c6-8338-9133458b1ca9.webp"
+    },
+    {
+        "id": 8,
+        "name": "iphone 17 promax",
+        "description": "hàng V/N ",
+        "price": 2000000.0,
+        "costPrice": 1500000.0,
+        "category": "Điện Thoại",
+        "stock": 10,
+        "imageUrl": "http://localhost:8000/images/c41eb6b5-b157-40d5-8702-ced5ea009be4.webp"
+    },
+    {
+        "id": 9,
+        "name": "iphone 17 promax",
+        "description": "hàng V/N ",
+        "price": 2000000.0,
+        "costPrice": 1500000.0,
+        "category": "Điện Thoại",
+        "stock": 10,
+        "imageUrl": "http://localhost:8000/images/7e5d58cf-e72f-4c76-a226-dc9da5455eaf.webp"
+    },
+    {
+        "id": 10,
+        "name": "iphone 17 promax",
+        "description": "hàng V/N ",
+        "price": 2000000.0,
+        "costPrice": 1500000.0,
+        "category": "Điện Thoại",
+        "stock": 10,
+        "imageUrl": "http://localhost:8000/images/f7d0d805-0add-45a7-96b8-076c6d23e3b7.webp"
     }
 ]

@@ -1,163 +1,275 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import ProductCard from './ProductCard';
+// src/components/ProductList.jsx
+import { useEffect, useState } from 'react';
+import { productsApi } from '../api/productsApi';
+import ProductCard from './ProductCard'; 
+import LoadingSpinner from './LoadingSpinner';
+import ErrorDisplay from './ErrorDisplay';
 
 const ProductList = () => {
-  const [products, setProducts] = useState([]);
-  const [quantities, setQuantities] = useState({});
+  const [products, setProducts] = useState([]);      
+  const [allProducts, setAllProducts] = useState([]); 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 💾 1. TÍNH NĂNG: Khởi tạo giỏ hàng ban đầu từ LocalStorage (nếu có)
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem('shophub_cart');
+    return savedCart ? JSON.parse(savedCart) : {};
+  });
+
+  // 🛍️ TÍNH NĂNG: Quản lý trạng thái đóng/mở Modal thông báo thanh toán
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 💾 2. TÍNH NĂNG: Tự động lưu giỏ hàng vào LocalStorage mỗi khi có thay đổi
+  useEffect(() => {
+    localStorage.setItem('shophub_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  // Tải danh sách sản phẩm từ API (Đã sửa lỗi cú pháp & tích hợp bộ lọc vạn năng)
+  const loadInitialProducts = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await productsApi.getAll();
+      let cleanData = [];
+
+      // Bộ lọc vạn năng bóc tách dữ liệu từ Axios và FastAPI
+      if (data) {
+        if (Array.isArray(data)) {
+          cleanData = data;
+        } else if (data.products && Array.isArray(data.products)) {
+          cleanData = data.products;
+        } else if (data.data && Array.isArray(data.data)) {
+          cleanData = data.data;
+        } else if (data.data && data.data.products && Array.isArray(data.data.products)) {
+          cleanData = data.data.products;
+        }
+      }
+
+      setProducts(cleanData);
+      setAllProducts(cleanData); 
+    } catch (err) {
+      console.error("Lỗi tải sản phẩm:", err);
+      setError('Không thể kết nối đến dữ liệu sản phẩm từ hệ thống.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Gọi API bốc dữ liệu trực tiếp từ Backend FastAPI
-    axios.get('http://localhost:8000/products')
-      .then((response) => {
-        // Vì API trả về Object { total, page, size, products } nên ta lấy đúng mảng response.data.products
-        const productData = response.data.products || [];
-        
-        setProducts(productData);
-        setQuantities(
-          productData.reduce((acc, product) => {
-            acc[product.id] = 0;
-            return acc;
-          }, {})
-        );
-        setLoading(false); // Tắt màn hình loading
-      })
-      .catch((err) => {
-        console.error("Lỗi kết nối API:", err);
-        setError("Không thể kết nối đến máy chủ Backend (FastAPI). Bác nhớ bật server uvicorn chưa?");
-        setLoading(false);
-      });
+    loadInitialProducts();
   }, []);
 
-  const handleIncrease = (id) => {
-    setQuantities(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  // Bộ lọc tìm kiếm thông minh an toàn
+  useEffect(() => {
+    const triggerSearch = async () => {
+      // Bảo đảm an toàn khi allProducts chưa load xong hoặc không phải mảng
+      const currentAllProducts = Array.isArray(allProducts) ? allProducts : [];
+
+      if (searchTerm.trim() === '') {
+        setProducts(currentAllProducts);
+        setError('');
+        return;
+      }
+
+      try {
+        const data = await productsApi.searchProduct(searchTerm);
+        if (Array.isArray(data)) { setProducts(data); return; }
+        if (data && data.products && Array.isArray(data.products)) { setProducts(data.products); return; }
+        if (data && data.data && Array.isArray(data.data)) { setProducts(data.data); return; }
+        throw new Error("API Search format invalid");
+      } catch (err) {
+        // Fallback filter tay nếu API search lỗi
+        const filtered = currentAllProducts.filter(p => 
+          p && p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setProducts(filtered);
+        setError(''); 
+      }
+    };
+
+    triggerSearch();
+  }, [searchTerm, allProducts]);
+
+  // Tăng / giảm số lượng trong giỏ hàng
+  const handleUpdateCart = (productId, amount) => {
+    setCart(prev => {
+      const currentQty = prev[productId] || 0;
+      const newQty = currentQty + amount;
+      if (newQty <= 0) {
+        const { [productId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [productId]: newQty };
+    });
   };
 
-  const handleDecrease = (id) => {
-    setQuantities(prev => ({ ...prev, [id]: (prev[id] || 0) > 0 ? prev[id] - 1 : 0 }));
+  // 💳 3. TÍNH NĂNG: Xử lý khi bấm nút "Tiến Hành Thanh Toán"
+  const handleCheckout = () => {
+    setIsModalOpen(true); // Mở popup chúc mừng
   };
 
-  const totalItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
-  const totalPrice = products.reduce((sum, product) => {
-    return sum + (product.price * (quantities[product.id] || 0));
+  // 💳 TÍNH NĂNG: Xác nhận hoàn tất đơn hàng, xóa sạch giỏ hàng
+  const handleConfirmOrder = () => {
+    setCart({}); // Reset giỏ hàng về trống
+    localStorage.removeItem('shophub_cart'); // Xóa giỏ hàng trong bộ nhớ máy
+    setIsModalOpen(false); // Đóng popup
+  };
+
+  // Đảm bảo các biến dùng loop luôn là mảng để không lỗi crash giao diện
+  const safeProductsArray = Array.isArray(products) ? products : [];
+  const safeAllProductsArray = Array.isArray(allProducts) ? allProducts : [];
+
+  const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+  
+  const totalPrice = safeAllProductsArray.reduce((sum, p) => { 
+    if (!p || !p.id) return sum;
+    const qty = cart[p.id] || 0; 
+    const itemPrice = Number(p.price) || 0;
+    return sum + (itemPrice * qty); 
   }, 0);
 
-  const formatVND = (price) => {
-    return price.toLocaleString('vi-VN') + 'đ';
-  };
-
-  // MÀN HÌNH CHỜ LOADING XỊN MỊN
-  if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '80vh', 
-        fontSize: '24px', 
-        fontFamily: 'Arial, sans-serif',
-        fontWeight: 'bold',
-        color: '#3498db'
-      }}>
-        ⏳ Đang kết nối server và tải danh sách sản phẩm ShopHub...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ textAlign: 'center', padding: '100px 50px', color: '#e74c3c', fontSize: '20px', fontFamily: 'Arial, sans-serif' }}>
-        ❌ Lỗi: {error}
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorDisplay message={error} onRetry={loadInitialProducts} />;
 
   return (
-    <div style={{ padding: '30px 40px', fontFamily: 'Arial, sans-serif' }}>
-      <h2 style={{ marginBottom: '20px', color: '#2c3e50' }}>Danh Sách Sản Phẩm Hệ Thống (Dữ Liệu Thật)</h2>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'system-ui, sans-serif', boxSizing: 'border-box' }}>
       
-      <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+      {/* Ô TÌM KIẾM */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '25px' }}>
+        <span style={{ fontWeight: 'bold', color: '#475569', fontSize: '14px' }}>Tìm kiếm:</span>
+        <input 
+          type="text" 
+          placeholder="Nhập tên điện thoại cần tìm..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: '6px 12px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            width: '280px',
+            fontSize: '14px',
+            outline: 'none'
+          }}
+        />
+      </div>
+
+      <h2 style={{ textAlign: 'center', fontSize: '22px', fontWeight: 'bold', color: '#1e293b', marginBottom: '30px' }}>
+        Danh Sách Sản Phẩm Hệ Thống (Dữ Liệu Thật)
+      </h2>
+
+      {/* CHIA LAYOUT GIỮ NGUYÊN BẢN 3 CỘT ĐÃ FIX */}
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', width: '100%' }}>
         
-        {/* BÊN TRÁI: Danh sách sản phẩm bốc từ Backend */}
-        <div style={{
-          flex: 3,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: '20px'
-        }}>
-          {products.length === 0 ? (
-            <p style={{ color: '#7f8c8d' }}>Chưa có sản phẩm nào trong hệ thống. Bác ra Swagger thêm thử nhé!</p>
+        {/* BÊN TRÁI: GRID 3 SẢN PHẨM HÀNG NGANG */}
+        <div style={{ flex: '3' }}>
+          {safeProductsArray.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+              {safeProductsArray.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  quantity={cart[product.id] || 0}
+                  onUpdateCart={handleUpdateCart}
+                />
+              ))}
+            </div>
           ) : (
-            products.map(product => (
-              <ProductCard 
-                key={product.id}
-                product={product}
-                quantity={quantities[product.id] || 0}
-                onIncrease={() => handleIncrease(product.id)}
-                onDecrease={() => handleDecrease(product.id)}
-              />
-            ))
+            <p style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '40px' }}>
+              Không tìm thấy sản phẩm nào trùng khớp với từ khóa.
+            </p>
           )}
         </div>
 
-        {/* BÊN PHẢI: Tóm tắt đơn hàng */}
-        <div style={{
-          flex: 1,
-          border: '1px solid #3498db',
-          borderRadius: '8px',
-          padding: '20px',
-          backgroundColor: '#f8f9fa',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-          position: 'sticky',
-          top: '20px'
-        }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#2980b9', borderBottom: '2px solid #3498db', paddingBottom: '10px' }}>
-            🛒 Tóm tắt đơn hàng
-          </h3>
-
-          {totalItems === 0 ? (
-            <p style={{ color: '#7f8c8d', fontSize: '14px' }}>Giỏ hàng đang trống.</p>
-          ) : (
-            <div style={{ marginBottom: '15px', maxHeight: '200px', overflowY: 'auto' }}>
-              {products.filter(p => quantities[p.id] > 0).map(product => (
-                <div key={product.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px' }}>
-                  <span style={{ flex: 1, marginRight: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {product.name}
-                  </span>
-                  <span style={{ fontWeight: 'bold' }}>x{quantities[product.id]}</span>
-                </div>
-              ))}
+        {/* BÊN PHẢI: KHỐI GIỎ HÀNG */}
+        <div style={{ flex: '1', minWidth: '280px', position: 'sticky', top: '20px' }}>
+          <div style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', backgroundColor: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b', margin: '0 0 12px 0', textAlign: 'center' }}>
+              🛒 Tóm tắt đơn hàng
+            </h3>
+            <hr style={{ border: '0', borderTop: '1px solid #f1f5f9', marginBottom: '12px' }} />
+            
+            {totalItems === 0 ? (
+              <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic', textAlign: 'center', padding: '10px 0' }}>
+                Giỏ hàng đang trống.
+              </p>
+            ) : (
+              <div style={{ marginBottom: '12px', maxHeight: '125px', overflowY: 'auto' }}>
+                {safeAllProductsArray.map(p => {
+                  if (!p || !p.id) return null;
+                  const qty = cart[p.id] || 0;
+                  if (qty === 0) return null;
+                  return (
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px' }}>{p.name}</span>
+                      <span style={{ fontWeight: 'bold', color: '#1e293b' }}>x{qty}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            <hr style={{ border: '0', borderTop: '1px solid #f1f5f9', margin: '12px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>
+              <span>Tổng sản phẩm:</span>
+              <span style={{ fontWeight: 'bold', color: '#1e293b' }}>{totalItems}</span>
             </div>
-          )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569', marginBottom: '20px' }}>
+              <span>Tổng thanh toán:</span>
+              <span style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '16px' }}>{totalPrice.toLocaleString('vi-VN')}đ</span>
+            </div>
 
-          <hr style={{ border: '0', borderTop: '1px solid #e0e0e0', margin: '15px 0' }} />
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span>Tổng sản phẩm:</span>
-            <span style={{ fontWeight: 'bold' }}>{totalItems}</span>
+            <button 
+              onClick={handleCheckout}
+              disabled={totalItems === 0}
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                color: '#fff',
+                border: 'none',
+                backgroundColor: totalItems === 0 ? '#cbd5e1' : '#22c55e',
+                cursor: totalItems === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Tiến Hành Thanh Toán
+            </button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', marginBottom: '20px' }}>
-            <span>Tổng thanh toán:</span>
-            <span style={{ fontWeight: 'bold', color: '#e74c3c' }}>{formatVND(totalPrice)}</span>
-          </div>
-          <button style={{
-            width: '100%',
-            backgroundColor: '#2ecc71',
-            color: '#ffffff',
-            border: 'none',
-            padding: '12px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}>
-            Tiến Hành Thanh Toán
-          </button>
         </div>
 
       </div>
+
+      {/* 🎭 POPUP POPUP MODAL THANH TOÁN THÀNH CÔNG NÂNG CAO */}
+      {isModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#fff', padding: '30px', borderRadius: '12px', width: '400px',
+            textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <span style={{ fontSize: '50px' }}>🎉</span>
+            <h3 style={{ margin: '10px 0', color: '#1e293b', fontSize: '20px', fontWeight: 'bold' }}>Đặt Hàng Thành Công!</h3>
+            <p style={{ color: '#475569', fontSize: '14px', marginBottom: '20px' }}>
+              Hệ thống ShopHub đã ghi nhận đơn hàng trị giá <strong style={{ color: '#ef4444' }}>{totalPrice.toLocaleString('vi-VN')}đ</strong> của bác.
+            </p>
+            <button 
+              onClick={handleConfirmOrder}
+              style={{
+                backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '10px 20px',
+                borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', width: '100%'
+              }}
+            >
+              Xác Nhận & Đóng
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

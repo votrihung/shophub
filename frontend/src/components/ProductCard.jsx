@@ -1,80 +1,106 @@
+// src/components/ProductCard.jsx
 import React from 'react';
+import { Link } from 'react-router-dom'; // 🌟 Import thêm dòng này để chuyển trang mượt mà
 
-const ProductCard = ({ product, quantity, onIncrease, onDecrease }) => {
-  // Hàm định dạng tiền Việt Nam chuẩn mẫu: 24.990.000đ
-  const formatVND = (price) => {
-    return price ? price.toLocaleString('vi-VN') + 'đ' : '0đ';
-  };
-
+const ProductCard = ({ product, quantity, onUpdateCart }) => {
   return (
     <div style={{
-      border: '1px solid #e0e0e0',
-      borderRadius: '8px',
+      border: '1px solid #e2e8f0',
+      borderRadius: '12px',
       padding: '15px',
-      textAlign: 'center',
-      backgroundColor: '#ffffff',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-      fontFamily: 'Arial, sans-serif',
+      backgroundColor: '#fff',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between',
-      height: '380px' // Tăng nhẹ chiều cao để chứa phần mô tả
+      justifyContent: 'between',
+      alignItems: 'center',
+      textAlign: 'center',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+      height: '100%',
+      boxSizing: 'border-box'
     }}>
-      <div>
-        {/* Hình ảnh sản phẩm - ĐÃ ĐỔI TỪ product.image SANG product.imageUrl */}
-        <img 
-          src={product.imageUrl} 
-          alt={product.name} 
-          style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '4px', marginBottom: '10px' }} 
-        />
-        
-        {/* Tên sản phẩm tiếng Việt */}
-        <h4 style={{ margin: '5px 0', fontSize: '15px', color: '#2c3e50', height: '38px', overflow: 'hidden' }}>
-          {product.name}
-        </h4>
+      
+      {/* 🌟 1. BỌC LINK CHO KHUNG CHỨA ẢNH */}
+      <Link to={`/products/${product.id}`} style={{ display: 'block', width: '100%', cursor: 'pointer' }}>
+        <div style={{
+          width: '100%',
+          height: '140px', 
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: '10px',
+          overflow: 'hidden',
+          backgroundColor: '#f8fafc',
+          borderRadius: '8px'
+        }}>
+          <img 
+            src={product.imageUrl || product.image || 'https://via.placeholder.com/150'} 
+            alt={product.name} 
+            style={{
+              maxWidth: '90%',
+              maxHeight: '90%',
+              objectFit: 'contain'
+            }}
+          />
+        </div>
+      </Link>
 
-        {/* Phần mô tả ngắn mới thêm theo yêu cầu */}
-        <p style={{ margin: '5px 0 10px 0', fontSize: '12px', color: '#7f8c8d', height: '32px', overflow: 'hidden', lineHeight: '1.3' }}>
-          {product.description}
-        </p>
+      {/* THÔNG TIN CHI TIẾT */}
+      <div style={{ flexGrow: 1, marginBottom: '10px', width: '100%' }}>
         
-        {/* Giá tiền dạng chữ đ */}
-        <p style={{ margin: '0 0 15px 0', fontWeight: 'bold', color: '#e74c3c', fontSize: '15px' }}>
-          {formatVND(product.price)}
+        {/* 🌟 2. BỌC LINK CHO TÊN SẢN PHẨM */}
+        <Link to={`/products/${product.id}`} style={{ textDecoration: 'none' }}>
+          <h3 style={{ 
+            fontSize: '15px', 
+            fontWeight: 'bold', 
+            color: '#1e293b', 
+            margin: '0 0 4px 0',
+            cursor: 'pointer'
+          }}>
+            {product.name}
+          </h3>
+        </Link>
+
+        <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 8px 0' }}>
+          {product.description || 'Hàng chính hãng VN/A'}
+        </p>
+        <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#ef4444', margin: '0' }}>
+          {product.price?.toLocaleString('vi-VN')}đ
         </p>
       </div>
-      
-      {/* Giữ nguyên bộ nút bấm tăng giảm số lượng trực tiếp tại sản phẩm */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: 'auto' }}>
+
+      {/* BỘ NÚT TĂNG GIẢM SỐ LƯỢNG - GIỮ NGUYÊN BẢN GỐC CỦA BÁC */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: 'auto' }}>
         <button 
-          onClick={onDecrease}
+          onClick={() => onUpdateCart(product.id, -1)}
           style={{
-            width: '30px',
-            height: '30px',
+            width: '28px',
+            height: '28px',
             borderRadius: '50%',
-            border: '1px solid #bdc3c7',
-            backgroundColor: '#ffffff',
+            border: '1px solid #cbd5e1',
+            backgroundColor: '#fff',
             cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           -
         </button>
-        
-        <span style={{ fontSize: '16px', fontWeight: 'bold', minWidth: '20px' }}>{quantity}</span>
-        
+        <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#334155', minWidth: '15px' }}>{quantity}</span>
         <button 
-          onClick={onIncrease}
+          onClick={() => onUpdateCart(product.id, 1)}
           style={{
-            width: '30px',
-            height: '30px',
+            width: '28px',
+            height: '28px',
             borderRadius: '50%',
-            border: '1px solid #bdc3c7',
-            backgroundColor: '#ffffff',
+            border: '1px solid #cbd5e1',
+            backgroundColor: '#fff',
             cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           +
