@@ -6,7 +6,10 @@ import ProductList from './components/ProductList'; // Hiển thị sản phẩm
 import ProductDetailPage from './pages/ProductDetailPage';
 import Footer from './components/Footer'; // Component Footer xịn của bác
 
-// 1. Trang chủ (HomePage)
+// BỔ SUNG: Import form Đăng ký / Đăng nhập mới toe anh em mình vừa tạo
+import Login from './components/Login'; 
+
+// 1. Trang chủ (HomePage) - GIỮ NGUYÊN
 const HomePage = () => {
   return (
     <>
@@ -19,7 +22,7 @@ const HomePage = () => {
   );
 };
 
-// 2. Trang giới thiệu (AboutPage)
+// 2. Trang giới thiệu (AboutPage) - GIỮ NGUYÊN
 const AboutPage = () => (
   <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
     <h2>About Us</h2>
@@ -27,7 +30,7 @@ const AboutPage = () => (
   </section>
 );
 
-// 3. Trang giỏ hàng (CartPage)
+// 3. Trang giỏ hàng (CartPage) - GIỮ NGUYÊN
 const CartPage = () => (
   <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
     <h2>Shopping Cart</h2>
@@ -35,13 +38,20 @@ const CartPage = () => (
   </section>
 );
 
-// 4. Trang đăng nhập (LoginPage)
-const LoginPage = () => (
-  <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
-    <h2>Login</h2>
-    <p>Authentication will be implemented in the Auth sessions.</p>
-  </section>
-);
+// 4. Trang đăng nhập (LoginPage) - ĐÃ CẬP NHẬT NHÚNG FORM LOGIN THẬT KẾT NỐI API
+const LoginPage = () => {
+  const handleLoginSuccess = (user) => {
+    alert(`Chào mừng ${user.username} đã quay trở lại hệ thống ShopHub!`);
+    // Ở đây bác có thể lưu user vào state hoặc localStorage nếu muốn, hiện tại cứ alert để kiểm tra kết nối ok!
+  };
+
+  return (
+    <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
+      {/* Thay thế dòng chữ thông báo cũ bằng Form Login hoạt động thật */}
+      <Login onLoginSuccess={handleLoginSuccess} />
+    </section>
+  );
+};
 
 const App = () => {
   return (
@@ -62,6 +72,7 @@ const App = () => {
           
           <Route path="/cart" element={<CartPage />} />
           
+          {/* Nhánh này sẽ chạy vào LoginPage đã nhúng Form API thật ở trên */}
           <Route path="/login" element={<LoginPage />} />
           
           {/* Trang 404 */}

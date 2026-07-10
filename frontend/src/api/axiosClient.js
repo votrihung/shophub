@@ -3,7 +3,7 @@ import axios from 'axios';
 import { handleApiError } from './errorHandler';
 
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5173',
+  baseURL: 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },
