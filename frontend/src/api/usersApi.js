@@ -1,27 +1,22 @@
-// src/api/usersApi.js
-import axiosClient from './axiosClient';
-import { handleApiError } from './errorHandler';
+// src/api/authApi.js
+import axios from 'axios';
 
-export const usersApi = {
-  // Lấy toàn bộ danh sách users
-  async getAll() {
-    try {
-      const response = await axiosClient.get('/users');
-      return response.data;
-    } catch (error) {
-      handleApiError(error, 'Failed to fetch users');
-      throw error;
-    }
+// 🌟 ÉP BUỘC truyền url tuyệt đối của Backend vào đây
+const API = axios.create({
+  baseURL: 'http://localhost:8000', 
+  headers: {
+    'Content-Type': 'application/json',
   },
+});
 
-  // Lấy chi tiết 1 user theo ID
-  async getById(id) {
-    try {
-      const response = await axiosClient.get(`/users/${id}`);
-      return response.data;
-    } catch (error) {
-      handleApiError(error, 'Failed to fetch user details');
-      throw error;
-    }
+export const authApi = {
+  register: async (payload) => {
+    // Gọi chuẩn đến http://localhost:8000/auth/register
+    const response = await API.post('/auth/register', payload);
+    return response.data;
+  },
+  login: async (payload) => {
+    const response = await API.post('/auth/login', payload);
+    return response.data;
   },
 };
