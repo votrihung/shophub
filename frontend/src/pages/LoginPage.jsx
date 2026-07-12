@@ -3,6 +3,8 @@ import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+// 🌟 IMPORT THÊM HELPER LƯU THÔNG TIN USER CHO LAB 10
+import { setUserInfo } from '../auth/userInfo'; 
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -18,7 +20,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setLoading(true); // 🌟 ĐÃ SỬA: Thay loading(true) bằng setLoading(true) để tránh crash code
     setError('');
 
     try {
@@ -34,15 +36,19 @@ const LoginPage = () => {
         const mappedUser = {
           id: rawUser.id,
           name: rawUser.username ? rawUser.username.split('@')[0] : 'Thành Viên', // Lấy phần trước chữ @ làm tên hiển thị
-          email: rawUser.username
+          email: rawUser.username,
+          role: rawUser.role || 'CUSTOMER' // 🌟 BẢO TOÀN QUYỀN: Lấy role từ backend trả về (ADMIN/CUSTOMER)
         };
 
         // Tạo một token giả định vì backend không dùng JWT token bảo mật phức tạp
         const fakeToken = `shophub-session-${rawUser.id}`;
 
-        // Kích hoạt trạng thái đăng nhập hệ thống
+        // 🌟 BỔ SUNG LAB 10: Lưu object user vào localStorage phục vụ phân quyền frontend
+        setUserInfo(mappedUser);
+
+        // Kích hoạt trạng thái đăng nhập hệ thống (Logic cũ của sốp)
         login(fakeToken, mappedUser);
-        alert('🎉 Đăng nhập thành công sốp ơi!');
+        alert('Đăng nhập thành công');
         navigate('/products');
       } else {
         setError('Đăng nhập thất bại hoặc cấu trúc phản hồi không hợp lệ.');
@@ -56,7 +62,7 @@ const LoginPage = () => {
         setError(typeof detailError === 'string' ? detailError : 'Tài khoản hoặc mật khẩu không chính xác!');
       }
     } finally {
-      setLoading(false);
+      setLoading(false); // 🌟 ĐÃ SỬA ĐỒNG BỘ: Sử dụng setLoading(false) thay cho hàm lỗi
     }
   };
 

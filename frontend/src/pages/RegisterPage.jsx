@@ -43,13 +43,27 @@ const RegisterPage = () => {
         navigate('/login');
       }, 2000);
     } catch (err) {
+      // 🚀 CẬP NHẬT: Lấy thông tin lỗi động từ Backend FastAPI trả về
+      let serverErrorMsg = 'Đăng ký thất bại. Vui lòng kiểm tra lại kết nối mạng!';
+      
       if (err.response && err.response.data) {
         console.error("📋 Lỗi chi tiết từ Server FastAPI:", err.response.data);
+        
+        // Nếu Backend trả về lỗi dạng chuỗi như "Tài khoản này đã tồn tại trên hệ thống!"
+        if (err.response.data.detail) {
+          if (typeof err.response.data.detail === 'string') {
+            serverErrorMsg = err.response.data.detail;
+          } else if (typeof err.response.data.detail === 'object') {
+            serverErrorMsg = JSON.stringify(err.response.data.detail);
+          }
+        }
       } else {
         console.error("📋 Lỗi kết nối hệ thống mạng:", err.message);
+        serverErrorMsg = err.message;
       }
       
-      setError('❌ Đăng ký thất bại. Email có thể đã tồn tại hoặc dữ liệu chưa đúng form!');
+      // Hiển thị trực tiếp lỗi thực tế lên giao diện cho người dùng thấy
+      setError(`❌ Lỗi: ${serverErrorMsg}`);
     } finally {
       setLoading(false);
     }

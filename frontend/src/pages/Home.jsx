@@ -1,21 +1,16 @@
-// src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// IMPORT API THẬT ĐỂ LẤY SẢN PHẨM TỪ DỰ ÁN
 import { productsApi } from '../api/productsApi'; 
 
 const Home = () => {
   const navigate = useNavigate();
   
-  // STATE ĐIỀU KHIỂN BANNER & POPUP
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showPopup, setShowPopup] = useState(true);
 
-  // STATE LƯU TRỮ SẢN PHẨM THẬT TỪ API
   const [realProducts, setRealProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // DỮ LIỆU BANNER XOAY VÒNG
   const slides = [
     {
       badge: "🔥 Khuyến mãi đón tuần mới!",
@@ -40,7 +35,6 @@ const Home = () => {
     }
   ];
 
-  // 1. TỰ ĐỘNG XOAY BANNER SLIDER
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -48,7 +42,6 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  // 2. GỌI API THẬT ĐỂ LẤY SẢN PHẨM ĐỒNG BỘ VỚI TRANG PRODUCTS
   useEffect(() => {
     const fetchHomeProducts = async () => {
       try {
@@ -58,7 +51,6 @@ const Home = () => {
         else if (data?.products) list = data.products;
         else if (data?.data) list = data.data.products || data.data;
 
-        // Lấy 4 sản phẩm đầu tiên từ danh sách thật để làm hàng trưng bày ở Home
         setRealProducts(list.slice(0, 4));
       } catch (err) {
         console.error("Lỗi đồng bộ sản phẩm tại trang Home:", err);
@@ -69,7 +61,6 @@ const Home = () => {
     fetchHomeProducts();
   }, []);
 
-  // HÀM KIỂM TRA ĐĂNG NHẬP CHUNG
   const checkAuthAndNavigate = (targetPath) => {
     const user = localStorage.getItem('user') || localStorage.getItem('shophub_user') || localStorage.getItem('token') || localStorage.getItem('shophub_token');
     if (user) {
@@ -80,7 +71,6 @@ const Home = () => {
     }
   };
 
-  // Nhãn Tag ngẫu nhiên cho thêm phần lung linh
   const tags = ["Hot", "Bán Chạy", "Premium", "New"];
 
   return (
@@ -135,16 +125,63 @@ const Home = () => {
             <p style={{ color: '#e0e7ff', fontSize: '15.5px', marginBottom: '28px', lineHeight: '1.6' }}>
               {slides[currentSlide].desc}
             </p>
-            <button 
-              onClick={() => checkAuthAndNavigate('/products')}
-              style={{ backgroundColor: '#ffffff', color: '#1e40af', fontWeight: '800', padding: '14px 38px', borderRadius: '14px', border: 'none', cursor: 'pointer', fontSize: '15px', boxShadow: '0 10px 20px rgba(0,0,0,0.15)' }}
-            >
-              Khám Phá Cửa Hàng 🛍️
-            </button>
+            
+            {/* KHU VỰC CÁC NÚT BẤM ĐIỀU HƯỚNG */}
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => checkAuthAndNavigate('/products')}
+                style={{ backgroundColor: '#ffffff', color: '#1e40af', fontWeight: '800', padding: '14px 32px', borderRadius: '14px', border: 'none', cursor: 'pointer', fontSize: '15px', boxShadow: '0 10px 20px rgba(0,0,0,0.15)' }}
+              >
+                Khám Phá Cửa Hàng 
+              </button>
+              
+              {/* ĐÃ CẬP NHẬT: CLICK VÀO ĐÂY LÀ CHUYỂN TRANG SANG /gioi-thieu LUÔN */}
+              <button 
+                onClick={() => checkAuthAndNavigate('/gioi-thieu')}
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', color: '#ffffff', fontWeight: '700', padding: '14px 32px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.4)', cursor: 'pointer', fontSize: '15px', backdropFilter: 'blur(4px)', transition: 'background 0.3s' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
+              >
+                Giới Thiệu Hệ Thống 
+              </button>
+            </div>
           </div>
           
           <div style={{ flex: '0.8', minWidth: '280px', display: 'flex', justifyContent: 'center' }}>
             <img key={currentSlide} src={slides[currentSlide].img} alt="Banner" style={{ width: '100%', maxWidth: '380px', height: '250px', objectFit: 'cover', borderRadius: '20px', boxShadow: '0 25px 30px -10px rgba(0, 0, 0, 0.4)', animation: 'fadeInScale 0.6s ease' }} />
+          </div>
+        </div>
+
+        {/* ================= GIỮ NGUYÊN KHỐI GIỚI THIỆU GIAO DIỆN Ở TRANG CHỦ THEO Ý SỐP ================= */}
+        <div id="shophub-about-section" style={{ marginTop: '56px', backgroundColor: '#ffffff', borderRadius: '24px', padding: '36px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <span style={{ color: '#2563eb', fontSize: '13px', fontWeight: '800', letterSpacing: '0.05em', textTransform: 'uppercase', backgroundColor: '#eff6ff', padding: '6px 16px', borderRadius: '9999px' }}>
+              Chúng tôi là ShopHub
+            </span>
+            <h2 style={{ fontSize: '26px', fontWeight: '850', color: '#0f172a', marginTop: '12px', marginBottom: '8px' }}>Hệ Thống Bán Lẻ Công Nghệ Cao Cấp</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6' }}>
+              Được thành lập với sứ mệnh mang lại trải nghiệm số đỉnh cao, ShopHub chuyên cung cấp các giải pháp thiết bị di động, máy tính và đồ chơi công nghệ hệ sinh thái thông minh dẫn đầu thị trường 2026.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+            <div style={{ padding: '24px', borderRadius: '16px', backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>✨</div>
+              <h4 style={{ fontSize: '16.5px', fontWeight: '800', color: '#1e293b', margin: '0 0 8px 0' }}>Sản Phẩm Tối Thượng</h4>
+              <p style={{ color: '#64748b', fontSize: '13px', margin: 0, lineHeight: '1.5' }}>Cam kết 100% chính hãng. Mọi thiết bị đều trải qua quy trình kiểm thử chất lượng đầu vào nghiêm ngặt.</p>
+            </div>
+
+            <div style={{ padding: '24px', borderRadius: '16px', backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>🚚</div>
+              <h4 style={{ fontSize: '16.5px', fontWeight: '800', color: '#1e293b', margin: '0 0 8px 0' }}>Vận Chuyển Siêu Tốc</h4>
+              <p style={{ color: '#64748b', fontSize: '13px', margin: 0, lineHeight: '1.5' }}>Giao hàng hỏa tốc nội thành Ho Chi Minh City trong 2 giờ. Bảo hiểm hàng hóa toàn diện suốt hành trình.</p>
+            </div>
+
+            <div style={{ padding: '24px', borderRadius: '16px', backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>🛡️</div>
+              <h4 style={{ fontSize: '16.5px', fontWeight: '800', color: '#1e293b', margin: '0 0 8px 0' }}>Bảo Hành Vượt Trội</h4>
+              <p style={{ color: '#64748b', fontSize: '13px', margin: 0, lineHeight: '1.5' }}>Chính sách 1 đổi 1 lên tới 45 ngày đầu. Đội ngũ chuyên viên xử lý kỹ thuật túc trực hỗ trợ 24/7.</p>
+            </div>
           </div>
         </div>
 

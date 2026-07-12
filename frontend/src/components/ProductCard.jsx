@@ -2,10 +2,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const ProductCard = ({ product, quantity, onUpdateCart }) => {
+const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
   // Trạng thái hover cho toàn bộ Card và nút bấm để điều khiển hiệu ứng mượt mà
   const [isHovered, setIsHovered] = useState(false);
   const [activeBtn, setActiveBtn] = useState(null); // 'minus' hoặc 'plus'
+  const [isDeleteHovered, setIsDeleteHovered] = useState(false); // Hover riêng cho nút xóa
+
+  // 🔍 LẤY ROLE TỪ LOCALSTORAGE ĐỂ PHÂN QUYỀN (MỤC 6.2 CỦA LAB)
+  const rawUser = localStorage.getItem('shophub_user');
+  const userObj = rawUser ? JSON.parse(rawUser) : null;
+  const isAdmin = userObj?.role === 'ADMIN';
 
   return (
     <div 
@@ -21,7 +27,7 @@ const ProductCard = ({ product, quantity, onUpdateCart }) => {
         backgroundColor: '#fff',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: 'between',
         alignItems: 'center',
         textAlign: 'center',
         height: '100%',
@@ -101,75 +107,106 @@ const ProductCard = ({ product, quantity, onUpdateCart }) => {
         </p>
       </div>
 
-      {/* BỘ NÚT TĂNG GIẢM SỐ LƯỢNG - THÊM HIỆU ỨNG LÚN NÚT VÀ ĐỔI MÀU NỀN */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: 'auto' }}>
-        <button 
-          onClick={() => onUpdateCart(product.id, -1)}
-          onMouseDown={() => setActiveBtn('minus')}
-          onMouseUp={() => setActiveBtn(null)}
-          style={{
-            width: '30px',
-            height: '30px',
-            borderRadius: '50%',
-            border: '1px solid #cbd5e1',
-            backgroundColor: activeBtn === 'minus' ? '#f1f5f9' : '#fff',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px',
-            color: '#475569',
-            // EFFECT 3: Bấm nút trừ co lại nhẹ tạo phản hồi cơ học
-            transform: activeBtn === 'minus' ? 'scale(0.9)' : 'scale(1)',
-            boxShadow: activeBtn === 'minus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
-            transition: 'all 0.15s ease',
-            outline: 'none'
-          }}
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#fff'; }}
-        >
-          -
-        </button>
+      {/* KHU VỰC ĐIỀU KHIỂN GIỎ HÀNG & NÚT QUẢN TRỊ */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: 'auto', width: '100%' }}>
+        
+        {/* BỘ NÚT TĂNG GIẢM SỐ LƯỢNG */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button 
+            onClick={() => onUpdateCart(product.id, -1)}
+            onMouseDown={() => setActiveBtn('minus')}
+            onMouseUp={() => setActiveBtn(null)}
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              border: '1px solid #cbd5e1',
+              backgroundColor: activeBtn === 'minus' ? '#f1f5f9' : '#fff',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              color: '#475569',
+              // EFFECT 3: Bấm nút trừ co lại nhẹ tạo phản hồi cơ học
+              transform: activeBtn === 'minus' ? 'scale(0.9)' : 'scale(1)',
+              boxShadow: activeBtn === 'minus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
+              transition: 'all 0.15s ease',
+              outline: 'none'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#fff'; }}
+          >
+            -
+          </button>
 
-        <span style={{ 
-          fontSize: '15px', 
-          fontWeight: '800', 
-          color: quantity > 0 ? '#2563eb' : '#475569', // Nhảy màu xanh nổi bật khi số lượng > 0
-          minWidth: '20px',
-          transition: 'color 0.2s'
-        }}>
-          {quantity}
-        </span>
+          <span style={{ 
+            fontSize: '15px', 
+            fontWeight: '800', 
+            color: quantity > 0 ? '#2563eb' : '#475569', // Nhảy màu xanh nổi bật khi số lượng > 0
+            minWidth: '20px',
+            transition: 'color 0.2s'
+          }}>
+            {quantity}
+          </span>
 
-        <button 
-          onClick={() => onUpdateCart(product.id, 1)}
-          onMouseDown={() => setActiveBtn('plus')}
-          onMouseUp={() => setActiveBtn(null)}
-          style={{
-            width: '30px',
-            height: '30px',
-            borderRadius: '50%',
-            border: '1px solid #cbd5e1',
-            backgroundColor: activeBtn === 'plus' ? '#f1f5f9' : '#fff',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px',
-            color: '#475569',
-            // EFFECT 4: Bấm nút cộng co lại nhẹ tạo phản hồi cơ học
-            transform: activeBtn === 'plus' ? 'scale(0.9)' : 'scale(1)',
-            boxShadow: activeBtn === 'plus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
-            transition: 'all 0.15s ease',
-            outline: 'none'
-          }}
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#fff'; }}
-        >
-          +
-        </button>
+          <button 
+            onClick={() => onUpdateCart(product.id, 1)}
+            onMouseDown={() => setActiveBtn('plus')}
+            onMouseUp={() => setActiveBtn(null)}
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              border: '1px solid #cbd5e1',
+              backgroundColor: activeBtn === 'plus' ? '#f1f5f9' : '#fff',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              color: '#475569',
+              // EFFECT 4: Bấm nút cộng co lại nhẹ tạo phản hồi cơ học
+              transform: activeBtn === 'plus' ? 'scale(0.9)' : 'scale(1)',
+              boxShadow: activeBtn === 'plus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
+              transition: 'all 0.15s ease',
+              outline: 'none'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#fff'; }}
+          >
+            +
+          </button>
+        </div>
+
+        {/* 🚨 BỔ SUNG: NÚT XÓA CHỈ DÀNH RIÊNG CHO ADMIN (MỤC 6.2 CỦA LAB) */}
+        {isAdmin && (
+          <button
+            onClick={() => onDelete && onDelete(product.id)}
+            onMouseEnter={() => setIsDeleteHovered(true)}
+            onMouseLeave={() => setIsDeleteHovered(false)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              marginTop: '4px',
+              backgroundColor: isDeleteHovered ? '#dc2626' : '#ef4444',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: isDeleteHovered ? '0 4px 6px -1px rgba(239, 68, 68, 0.2)' : 'none',
+              transform: isDeleteHovered ? 'scale(1.02)' : 'scale(1)',
+              transition: 'all 0.2s ease',
+              outline: 'none'
+            }}
+          >
+            🗑️ Xóa Sản Phẩm
+          </button>
+        )}
       </div>
     </div>
   );

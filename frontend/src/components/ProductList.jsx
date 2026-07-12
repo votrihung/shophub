@@ -1,13 +1,22 @@
 // src/components/ProductList.jsx
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useContext } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 import { productsApi } from '../api/productsApi';
+import { AuthContext } from '../context/AuthContext'; 
 import ProductCard from './ProductCard'; 
 import LoadingSpinner from './LoadingSpinner';
 import ErrorDisplay from './ErrorDisplay';
 
 const ProductList = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext); 
+  
+  const rawLocal = localStorage.getItem('shophub_user');
+  const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
+  
+  const isAdmin = String(user?.role).toUpperCase() === 'ADMIN' || 
+                  String(parsedLocal?.role).toUpperCase() === 'ADMIN';
+
   const [allProducts, setAllProducts] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,6 +72,33 @@ const ProductList = () => {
     loadInitialProducts();
   }, []);
 
+  // 🚨 BỔ SUNG: HÀM XỬ LÝ XÓA SẢN PHẨM PHÍA ADMIN (MỤC 6.2 CỦA LAB)
+  const handleDeleteProduct = async (productId) => {
+    const isConfirm = window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm này khỏi hệ thống không?');
+    if (!isConfirm) return;
+
+    try {
+      // Gọi API DELETE lên backend FastAPI
+      await productsApi.delete(productId);
+      
+      // Xóa thành công thì lọc bỏ khỏi state để UI tự động biến mất mà không cần load lại trang
+      setAllProducts((prevProducts) => prevProducts.filter(p => p.id !== productId));
+      
+      // Nếu sản phẩm đang có trong giỏ hàng thì dọn dẹp luôn cho sạch sẽ
+      if (cart[productId]) {
+        setCart(prev => {
+          const { [productId]: _, ...rest } = prev;
+          return rest;
+        });
+      }
+
+      alert('Thành công: Đã xóa sản phẩm khỏi hệ thống.');
+    } catch (err) {
+      console.error("Lỗi xóa sản phẩm:", err);
+      alert('❌ Thất bại! Lỗi từ Server Backend:\n' + (err.response?.data?.detail || err.message));
+    }
+  };
+
   const filteredProducts = useMemo(() => {
     const currentAllProducts = Array.isArray(allProducts) ? allProducts : [];
     
@@ -81,7 +117,6 @@ const ProductList = () => {
     });
   }, [searchTerm, allProducts, selectedCategory]);
 
-  // 🌟 LOGIC CẬP NHẬT: Thêm phát Custom Event để Navbar bắt sóng tức thì
   const handleUpdateCart = (productId, amount) => {
     setCart(prev => {
       const currentQty = prev[productId] || 0;
@@ -95,7 +130,6 @@ const ProductList = () => {
         nextCart = { ...prev, [productId]: newQty };
       }
 
-      // Phát tín hiệu ngay lập tức cho Navbar chuyển động lắc lư
       setTimeout(() => {
         window.dispatchEvent(new Event('cart_updated'));
       }, 0);
@@ -124,8 +158,11 @@ const ProductList = () => {
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '32px 16px', fontFamily: 'system-ui, sans-serif', boxSizing: 'border-box', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* 🔍 EFFECT: Ô tìm kiếm bo viền chuyển động mượt mà */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+      {/* 🔍 SEARCH TOOLBAR & ADMIN ACTION BOX */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+        
+        {/* ĐÃ XÓA KHỐI DIV DEBUG HIỂN THỊ QUYỀN ĐỌC TẠI ĐÂY */}
+
         <div style={{ position: 'relative', width: '100%', maxWidth: '440px', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: '16px', color: '#94a3b8', fontSize: '16px' }}>🔍</span>
           <input 
@@ -144,26 +181,38 @@ const ProductList = () => {
               boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.03)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
-              e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#cbd5e1';
-              e.target.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.03)';
-            }}
           />
         </div>
+
+        {/* 🌟 NÚT THÊM SẢN PHẨM MỚI CHÍNH THỨC HIỆN KHI LÀ ADMIN */}
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin/products/new')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#22c55e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: '700',
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            ➕ Thêm Sản Phẩm Mới (Admin)
+          </button>
+        )}
       </div>
 
       <h2 style={{ textAlign: 'center', fontSize: '26px', fontWeight: '800', color: '#0f172a', marginBottom: '40px', letterSpacing: '-0.5px' }}>
         Danh Sách Sản Phẩm Hệ Thống (Dữ Liệu Thật)
       </h2>
 
-      {/* 🔀 LAYOUT HAI CỘT CHÍNH CÂN ĐỐI */}
       <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start' }}>
         
-        {/* ================= CỘT TRÁI: SIDEBAR & TÓM TẮT GIỎ HÀNG (STICKY SMOOTH) ================= */}
+        {/* ================= CỘT TRÁI: SIDEBAR & TÓM TẮT GIỎ HÀNG ================= */}
         <div style={{ 
           flex: '1', 
           minWidth: '290px', 
@@ -204,20 +253,6 @@ const ProductList = () => {
                       cursor: 'pointer',
                       transform: isSelected ? 'translateX(4px)' : 'none',
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                    onMouseOver={(e) => { 
-                      if(!isSelected) {
-                        e.target.style.backgroundColor = '#f1f5f9';
-                        e.target.style.transform = 'translateX(4px)';
-                        e.target.style.color = '#0f172a';
-                      }
-                    }}
-                    onMouseOut={(e) => { 
-                      if(!isSelected) {
-                        e.target.style.backgroundColor = 'transparent';
-                        e.target.style.transform = 'none';
-                        e.target.style.color = '#475569';
-                      }
                     }}
                   >
                     {cat.name}
@@ -266,11 +301,10 @@ const ProductList = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13.5px', color: '#64748b', marginBottom: '20px' }}>
                 <span>Tổng thanh toán:</span>
-                <span style={{ fontWeight: '800', color: '#ef4444', fontSize: '18px', trackingTight: '-0.5px' }}>{totalPrice.toLocaleString('vi-VN')}đ</span>
+                <span style={{ fontWeight: '800', color: '#ef4444', fontSize: '18px' }}>{totalPrice.toLocaleString('vi-VN')}đ</span>
               </div>
             </div>
 
-            {/* EFFECT ACTIVE: Bấm vào lún nhẹ nút xuống cực êm */}
             <button 
               onClick={handleCheckout}
               disabled={totalItems === 0}
@@ -287,10 +321,6 @@ const ProductList = () => {
                 boxShadow: totalItems === 0 ? 'none' : '0 4px 14px rgba(34, 197, 94, 0.2)',
                 transition: 'all 0.2s ease'
               }}
-              onMouseDown={(e) => { if(totalItems > 0) e.currentTarget.style.transform = 'scale(0.97)' }}
-              onMouseUp={(e) => { if(totalItems > 0) e.currentTarget.style.transform = 'scale(1)' }}
-              onMouseOver={(e) => { if(totalItems > 0) e.currentTarget.style.backgroundColor = '#16a34a' }}
-              onMouseOut={(e) => { if(totalItems > 0) e.currentTarget.style.backgroundColor = '#22c55e' }}
             >
               Tiến Hành Thanh Toán
             </button>
@@ -311,6 +341,7 @@ const ProductList = () => {
                   product={product} 
                   quantity={cart[product.id] || 0}
                   onUpdateCart={handleUpdateCart}
+                  onDelete={handleDeleteProduct}
                 />
               ))}
             </div>
@@ -324,7 +355,6 @@ const ProductList = () => {
         </div>
 
       </div>
-
     </div>
   );
 };

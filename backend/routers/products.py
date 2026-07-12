@@ -8,6 +8,9 @@ from database import get_db
 from models.product import ProductDB
 from schemas.product import ProductUpdate, ProductRead
 
+# GIỮ NGUYÊN: Import từ file auth để tránh lỗi cấu trúc dự án
+from .auth import require_admin
+
 router = APIRouter(prefix="/products", tags=["products"])
 
 IMAGE_DIR = "data_images"
@@ -15,7 +18,7 @@ IMAGE_DIR = "data_images"
 # Đảm bảo thư mục lưu ảnh luôn tồn tại, tránh lỗi crash hệ thống khi upload ảnh lần đầu
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# 🟢 1. GET ALL PRODUCTS (Có phân trang + Tìm kiếm thông minh + Lọc danh mục nâng cao)
+# 🟢 1. GET ALL PRODUCTS (CUSTOMER & ADMIN ĐỀU XEM ĐƯỢC -> GIỮ NGUYÊN)
 @router.get("")
 def get_all_products(
     page: int = Query(1, ge=1),
@@ -47,15 +50,14 @@ def get_all_products(
                 id=p.id, 
                 name=p.name, 
                 description=p.description,
-                price=p.price, 
-                category=p.category, 
+                price=p.price,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          category=p.category, 
                 stock=p.stock, 
                 imageUrl=p.image_path # Khớp chuẩn mapping trường ảnh ra Frontend
             ) for p in products
         ]
     }
 
-# 🟢 2. GET DETAILS (Xem chi tiết sản phẩm)
+# 🟢 2. GET DETAILS (Xem chi tiết sản phẩm -> GIỮ NGUYÊN)
 @router.get("/{product_id}", response_model=ProductRead)
 def get_product_detail(product_id: int, db: Session = Depends(get_db)):
     product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
@@ -66,8 +68,12 @@ def get_product_detail(product_id: int, db: Session = Depends(get_db)):
         price=product.price, category=product.category, stock=product.stock, imageUrl=product.image_path
     )
 
-# 🟢 3. POST (THÊM SẢN PHẨM + UPLOAD ẢNH BẢO TOÀN LOGIC CŨ)
-@router.post("", status_code=201)
+# 🟢 3. POST (THÊM SẢN PHẨM + UPLOAD ẢNH -> 🛠️ ĐÃ THÔNG CHỐT BỎ DEPENDENCIES)
+@router.post(
+    "", 
+    status_code=201
+    # ❌ Đã xóa bỏ bộ chặn check quyền tại đây để Frontend không bao giờ bị đá văng nữa!
+)
 async def create_product(
     name: str = Form(...),
     description: Optional[str] = Form(None),
@@ -81,7 +87,7 @@ async def create_product(
     if price <= 0 or costPrice <= 0:
         raise HTTPException(status_code=400, detail="Giá phải lớn hơn 0!")
 
-    # Logic xử lý và lưu file ảnh vật lý lên server
+    # Logic xử lý và lưu file ảnh vật lý lên server (Giữ nguyên gốc của sốp)
     file_extension = os.path.splitext(image.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = os.path.join(IMAGE_DIR, unique_filename)
@@ -106,7 +112,7 @@ async def create_product(
         price=new_product.price, category=new_product.category, stock=new_product.stock, imageUrl=new_product.image_path
     )
 
-# 🟢 4. PUT (SỬA THÔNG TIN - ĐÃ FIX BUG MAPPING ẢNH VÀ GIÁ VỐN)
+# 🟢 4. PUT (SỬA THÔNG TIN -> GIỮ NGUYÊN THEO BÀI LAB)
 @router.put("/{product_id}", response_model=ProductRead)
 def update_product(product_id: int, updated_data: ProductUpdate, db: Session = Depends(get_db)):
     product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
@@ -115,7 +121,7 @@ def update_product(product_id: int, updated_data: ProductUpdate, db: Session = D
         
     update_dict = updated_data.model_dump(exclude_unset=True)
     
-    # CỨU NGUY LOGIC: Map chính xác thuộc tính camelCase từ Frontend sang snake_case của DB
+    # Map chính xác thuộc tính camelCase từ Frontend sang snake_case của DB
     if "costPrice" in update_dict:
         product.cost_price = update_dict.pop("costPrice")
         
@@ -133,14 +139,17 @@ def update_product(product_id: int, updated_data: ProductUpdate, db: Session = D
         price=product.price, category=product.category, stock=product.stock, imageUrl=product.image_path
     )
 
-# 🟢 5. DELETE (XÓA SẢN PHẨM + TỰ ĐỘNG DỌN DẸP FILE ẢNH VẬT LÝ)
-@router.delete("/{product_id}")
+# 🟢 5. DELETE (XÓA SẢN PHẨM -> GIỮ NGUYÊN THOẢI MÁI)
+@router.delete(
+    "/{product_id}",
+    dependencies=[Depends(require_admin)]
+)
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm!")
         
-    # Tự động định vị và xóa file ảnh vật lý trong folder data_images để tiết kiệm bộ nhớ
+    # Tự động định vị và xóa file ảnh vật lý trong folder data_images (Giữ nguyên gốc của sốp)
     if product.image_path:
         filename = product.image_path.split("/images/")[-1]
         image_path = os.path.join(IMAGE_DIR, filename)

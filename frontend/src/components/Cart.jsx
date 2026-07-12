@@ -74,7 +74,7 @@ const Cart = () => {
   const handleSubmitOrder = (e) => {
     e.preventDefault();
     if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.address) {
-      alert('Sốp ơi, vui lòng điền đầy đủ các thông tin có dấu (*) nha!');
+      alert('vui lòng điền đầy đủ các thông tin có dấu (*) nha!');
       return;
     }
 
@@ -101,7 +101,7 @@ const Cart = () => {
       {cartItems.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
           <span style={{ fontSize: '50px' }}>🛍️</span>
-          <p style={{ color: '#64748b', margin: '16px 0 24px 0', fontStyle: 'italic' }}>Giỏ hàng hiện tại đang trống rỗng sốp ơi.</p>
+          <p style={{ color: '#64748b', margin: '16px 0 24px 0', fontStyle: 'italic' }}>Giỏ hàng hiện tại đang trống rỗng.</p>
           <button onClick={() => navigate('/products')} style={{ padding: '12px 24px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
             Quay lại trang sản phẩm mua sắm
           </button>
