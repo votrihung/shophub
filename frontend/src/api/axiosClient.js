@@ -12,11 +12,9 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.response.use(
   (response) => {
-    // Trả về trực tiếp response.data nếu thành công
     return response.data;
   },
   (error) => {
-    // Nếu lỗi, xử lý qua errorHandler rồi quăng lỗi ra ngoài
     handleApiError(error);
     return Promise.reject(error);
   }

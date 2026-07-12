@@ -9,6 +9,5 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     
-    # 🚀 BỔ SUNG 2 CỘT NÀY ĐỂ KHỚP VỚI LOGIC ĐĂNG KÝ VÀ PHÂN QUYỀN
-    role = Column(String, default="user", nullable=False)  # Mặc định tài khoản mới tạo là quyền 'user'
-    full_name = Column(String, nullable=True)             # Lưu họ và tên từ Frontend gửi lên
+    role = Column(String, default="user", nullable=False)  
+    full_name = Column(String, nullable=True)         

@@ -29,15 +29,14 @@ export const productsApi = {
     return response.data;
   },
 
-  // 🚨 HÀM XÓA SẢN PHẨM MỚI BỔ SUNG (Bảo lưu nguyên vẹn logic fakeToken tối thượng của sốp):
+  // 🚨 HÀM XÓA CẬP NHẬT MỚI: Dùng Axios thuần + Ép kiểu ID + Gửi Token để đập tan lỗi 422!
   delete: async (id) => {
-    // Đồng bộ cách lấy token giống hệt hàm create phía trên của sốp
+    // Lấy token giả định từ localStorage tương tự hàm create để Backend xác thực quyền Admin nếu cần
     const rawLocal = localStorage.getItem('shophub_user');
     const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
     const fakeToken = `shophub-session-${parsedLocal?.id || 1}`;
 
-    // Gọi Axios thuần trỏ thẳng đến cổng 8000 của Backend kèm theo id sản phẩm
-    const response = await axios.delete(`http://localhost:8000/products/${id}`, {
+    const response = await axios.delete(`http://localhost:8000/products/${String(id)}`, {
       headers: {
         'Authorization': `Bearer ${fakeToken}`
       }
