@@ -14,8 +14,9 @@ import Home from './pages/Home';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider, useCart } from './context/CartContext'; 
 import ProtectedRoute from './components/ProtectedRoute';
-import AdminRoute from './routes/AdminRoute'; // 🚨 BỔ SUNG IMPORT CỔNG CHECK ADMIN Ở ĐÂY NÈ SỐP
+import AdminRoute from './routes/AdminRoute'; 
 
 const AdminAddProductPage = () => {
   const navigate = useNavigate();
@@ -139,13 +140,7 @@ const AboutPage = () => (
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const [allProducts, setAllProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [cart, setCart] = useState(() => {
-    const savedCart = localStorage.getItem('shophub_cart');
-    return savedCart ? JSON.parse(savedCart) : {};
-  });
+  const { items, updateQuantity, removeFromCart, totalQuantity, totalPrice, clearCart } = useCart();
 
   const [shippingInfo, setShippingInfo] = useState({
     fullName: '',
@@ -153,45 +148,6 @@ const CartPage = () => {
     address: '',
     note: ''
   });
-
-  useEffect(() => {
-    localStorage.setItem('shophub_cart', JSON.stringify(cart));
-  }, [cart]);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data = await productsApi.getAll();
-        if (Array.isArray(data)) setAllProducts(data);
-        else if (data?.products) setAllProducts(data.products);
-        else if (data?.data) setAllProducts(data.data.products || data.data);
-      } catch (err) {
-        console.error("Không lấy được danh sách sản phẩm đối chiếu:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, []);
-
-  const updateQuantity = (productId, amount) => {
-    setCart(prev => {
-      const currentQty = prev[productId] || 0;
-      const newQty = currentQty + amount;
-      if (newQty <= 0) {
-        const { [productId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [productId]: newQty };
-    });
-  };
-
-  const removeProduct = (productId) => {
-    setCart(prev => {
-      const { [productId]: _, ...rest } = prev;
-      return rest;
-    });
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -206,22 +162,15 @@ const CartPage = () => {
     }
 
     alert(`🎉 Đặt hàng thành công!\nXin cảm ơn quý khách ${shippingInfo.fullName}.\nĐơn hàng sẽ được gửi tới địa chỉ: ${shippingInfo.address}`);
-    setCart({});
-    localStorage.removeItem('shophub_cart');
+    clearCart(); // Dọn dẹp giỏ hàng mượt mà từ Context
     navigate('/products');
   };
-
-  const cartItems = allProducts.filter(p => cart[p.id] > 0);
-  const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-  const totalPrice = cartItems.reduce((sum, p) => sum + (Number(p.price) * cart[p.id]), 0);
-
-  if (loading) return <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>Đang tải thông tin giỏ hàng...</div>;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 16px', fontFamily: 'system-ui, sans-serif', color: '#1e293b', minHeight: '60vh' }}>
       <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '32px' }}>🛒 Giỏ Hàng Của Bạn</h2>
 
-      {cartItems.length === 0 ? (
+      {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
           <span style={{ fontSize: '50px' }}>🛍️</span>
           <p style={{ color: '#64748b', margin: '16px 0 24px 0', fontStyle: 'italic' }}>Giỏ hàng hiện tại đang trống rỗng .</p>
@@ -232,19 +181,19 @@ const CartPage = () => {
       ) : (
         <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {cartItems.map(item => (
+            {items.map(item => (
               <div key={item.id} style={{ display: 'flex', gap: '16px', backgroundColor: '#fff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', alignItems: 'center' }}>
-                <img src={item.image_url || 'https://via.placeholder.com/80'} alt={item.name} style={{ width: '80px', height: '80px', objectFit: 'contain', backgroundColor: '#f8fafc', borderRadius: '8px' }} />
+                <img src={item.imageUrl || item.image_url || 'https://via.placeholder.com/80'} alt={item.name} style={{ width: '80px', height: '80px', objectFit: 'contain', backgroundColor: '#f8fafc', borderRadius: '8px' }} />
                 <div style={{ flex: '1' }}>
                   <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: '700' }}>{item.name}</h4>
                   <p style={{ margin: 0, color: '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>{Number(item.price).toLocaleString('vi-VN')}đ</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', border: '1px solid #cbd5e1', borderRadius: '20px', padding: '4px 12px', backgroundColor: '#f8fafc' }}>
-                  <button onClick={() => updateQuantity(item.id, -1)} style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 'bold', width: '16px' }}>-</button>
-                  <span style={{ fontSize: '14px', fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{cart[item.id]}</span>
-                  <button onClick={() => updateQuantity(item.id, 1)} style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 'bold', width: '16px' }}>+</button>
+                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)} style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 'bold', width: '16px' }}>-</button>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                  <button onClick={() => updateQuantity(item.id, item.quantity + 1)} style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 'bold', width: '16px' }}>+</button>
                 </div>
-                <button onClick={() => removeProduct(item.id)} style={{ border: 'none', backgroundColor: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', padding: '0 8px' }}>🗑️</button>
+                <button onClick={() => removeFromCart(item.id)} style={{ border: 'none', backgroundColor: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', padding: '0 8px' }}>🗑️</button>
               </div>
             ))}
           </div>
@@ -272,7 +221,7 @@ const CartPage = () => {
               <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '10px', paddingTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
                   <span>Số lượng:</span>
-                  <span style={{ fontWeight: 'bold' }}>{totalItems} sản phẩm</span>
+                  <span style={{ fontWeight: 'bold' }}>{totalQuantity} sản phẩm</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', marginBottom: '20px' }}>
                   <span>Tổng tiền:</span>
@@ -330,65 +279,66 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Header title="ShopHub" />
-        
-        <div style={{ flex: 1 }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            
-            <Route 
-              path="/products" 
-              element={
-                <ProtectedRoute>
-                  <ProductList />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route 
-              path="/products/:id" 
-              element={
-                <ProtectedRoute>
-                  <ProductDetailPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route path="/about" element={<About />} />
-            <Route path="/gioi-thieu" element={<About />} />
-            
-            <Route 
-              path="/cart" 
-              element={
-                <ProtectedRoute>
-                  <CartPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
-            {/* 🚨 KHU VỰC ĐƯỢC BẢO VỆ: Đã bọc trang tạo sản phẩm vào bên trong AdminRoute thành công */}
-            <Route element={<AdminRoute />}>
-              <Route path="/admin/products/new" element={<AdminAddProductPage />} />
-            </Route>
-            
-            <Route
-              path="*"
-              element={
-                <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
-                  <h2>Page not found</h2>
-                  <p>The page you are looking for does not exist.</p>
-                </section>
-              }
-            />
-          </Routes>
-        </div>
+      <CartProvider>
+        <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <Header title="ShopHub" />
+          
+          <div style={{ flex: 1 }}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              
+              <Route 
+                path="/products" 
+                element={
+                  <ProtectedRoute>
+                    <ProductList />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/products/:id" 
+                element={
+                  <ProtectedRoute>
+                    <ProductDetailPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route path="/about" element={<About />} />
+              <Route path="/gioi-thieu" element={<About />} />
+              
+              <Route 
+                path="/cart" 
+                element={
+                  <ProtectedRoute>
+                    <CartPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              
+              <Route element={<AdminRoute />}>
+                <Route path="/admin/products/new" element={<AdminAddProductPage />} />
+              </Route>
+              
+              <Route
+                path="*"
+                element={
+                  <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
+                    <h2>Page not found</h2>
+                    <p>The page you are looking for does not exist.</p>
+                  </section>
+                }
+              />
+            </Routes>
+          </div>
 
-        <Footer />
-      </div>
+          <Footer />
+        </div>
+      </CartProvider>
     </AuthProvider>
   );
 };

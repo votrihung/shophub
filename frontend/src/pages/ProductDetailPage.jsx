@@ -1,13 +1,14 @@
-// src/pages/ProductDetailPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { productsApi } from '../api/productsApi';
+import { useCart } from '../context/CartContext';
 
 const ProductDetailPage = () => {
-  const { id } = useParams(); // Lấy ID sản phẩm từ thanh địa chỉ URL
+  const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -16,7 +17,6 @@ const ProductDetailPage = () => {
 
       try {
         const p = await productsApi.getById(id);
-        // Map dữ liệu chuẩn từ API trả về giống như yêu cầu đề bài
         const mapped = {
           id: p.id,
           name: p.name,
@@ -48,10 +48,13 @@ const ProductDetailPage = () => {
     return <p style={{ padding: '24px', textAlign: 'center', fontFamily: 'sans-serif' }}>Product not found.</p>;
   }
 
+  const handleAddToCart = () => {
+    addToCart(product, 1);
+  };
+
   return (
     <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', fontFamily: 'system-ui, sans-serif' }}>
       
-      {/* Nút quay lại danh sách */}
       <Link to="/products" style={{ 
         display: 'inline-block', 
         marginBottom: '24px', 
@@ -62,10 +65,8 @@ const ProductDetailPage = () => {
         ← Back to Products
       </Link>
 
-      {/* Chi tiết sản phẩm */}
       <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start', backgroundColor: '#fff', padding: '30px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
         
-        {/* Khung ảnh lớn */}
         <div style={{ width: '320px', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', padding: '10px' }}>
           <img
             src={product.imageUrl}
@@ -74,7 +75,6 @@ const ProductDetailPage = () => {
           />
         </div>
 
-        {/* Khối thông tin chữ bên phải */}
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e293b', margin: '0 0 8px 0' }}>{product.name}</h2>
           <p style={{ color: '#64748b', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 16px 0' }}>
@@ -90,10 +90,7 @@ const ProductDetailPage = () => {
           </div>
 
           <button
-            onClick={() => {
-              // Bác có thể tích hợp hàm cập nhật giỏ hàng trực tiếp vào đây nếu muốn phát triển thêm
-              alert('Sản phẩm đã được thêm vào giỏ hàng!');
-            }}
+            onClick={handleAddToCart}
             style={{
               marginTop: '25px',
               padding: '12px 24px',

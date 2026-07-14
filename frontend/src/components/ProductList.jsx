@@ -1,8 +1,8 @@
-// src/components/ProductList.jsx
 import { useEffect, useState, useMemo, useContext } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 import { productsApi } from '../api/productsApi';
 import { AuthContext } from '../context/AuthContext'; 
+import { useCart } from '../context/CartContext';
 import ProductCard from './ProductCard'; 
 import LoadingSpinner from './LoadingSpinner';
 import ErrorDisplay from './ErrorDisplay';
@@ -10,6 +10,7 @@ import ErrorDisplay from './ErrorDisplay';
 const ProductList = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext); 
+  const { items, addToCart, updateQuantity, removeFromCart, totalQuantity, totalPrice } = useCart();
   
   const rawLocal = localStorage.getItem('shophub_user');
   const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
@@ -30,15 +31,6 @@ const ProductList = () => {
     { id: 'Tablet', name: ' Máy Tính Bảng (iPad)' },
     { id: 'Accessory', name: ' Phụ Kiện' }
   ];
-  
-  const [cart, setCart] = useState(() => {
-    const savedCart = localStorage.getItem('shophub_cart');
-    return savedCart ? JSON.parse(savedCart) : {};
-  });
-
-  useEffect(() => {
-    localStorage.setItem('shophub_cart', JSON.stringify(cart));
-  }, [cart]);
 
   const loadInitialProducts = async () => {
     setLoading(true);
@@ -72,26 +64,13 @@ const ProductList = () => {
     loadInitialProducts();
   }, []);
 
-  // 🚨 BỔ SUNG: HÀM XỬ LÝ XÓA SẢN PHẨM PHÍA ADMIN (MỤC 6.2 CỦA LAB)
   const handleDeleteProduct = async (productId) => {
     const isConfirm = window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm này khỏi hệ thống không?');
     if (!isConfirm) return;
 
     try {
-      // Gọi API DELETE lên backend FastAPI
       await productsApi.delete(productId);
-      
-      // Xóa thành công thì lọc bỏ khỏi state để UI tự động biến mất mà không cần load lại trang
       setAllProducts((prevProducts) => prevProducts.filter(p => p.id !== productId));
-      
-      // Nếu sản phẩm đang có trong giỏ hàng thì dọn dẹp luôn cho sạch sẽ
-      if (cart[productId]) {
-        setCart(prev => {
-          const { [productId]: _, ...rest } = prev;
-          return rest;
-        });
-      }
-
       alert('Thành công: Đã xóa sản phẩm khỏi hệ thống.');
     } catch (err) {
       console.error("Lỗi xóa sản phẩm:", err);
@@ -118,39 +97,23 @@ const ProductList = () => {
   }, [searchTerm, allProducts, selectedCategory]);
 
   const handleUpdateCart = (productId, amount) => {
-    setCart(prev => {
-      const currentQty = prev[productId] || 0;
-      const newQty = currentQty + amount;
-      
-      let nextCart;
-      if (newQty <= 0) {
-        const { [productId]: _, ...rest } = prev;
-        nextCart = rest;
-      } else {
-        nextCart = { ...prev, [productId]: newQty };
-      }
+    const targetProduct = allProducts.find(p => p.id === productId);
+    if (!targetProduct) return;
 
-      setTimeout(() => {
-        window.dispatchEvent(new Event('cart_updated'));
-      }, 0);
+    const existingItem = items.find(item => item.id === productId);
+    const currentQty = existingItem ? existingItem.quantity : 0;
+    const newQty = currentQty + amount;
 
-      return nextCart;
-    });
+    if (newQty <= 0) {
+      removeFromCart(productId);
+    } else {
+      updateQuantity(productId, newQty);
+    }
   };
 
   const handleCheckout = () => {
     navigate('/cart'); 
   };
-
-  const safeAllProductsArray = Array.isArray(allProducts) ? allProducts : [];
-  const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-  
-  const totalPrice = safeAllProductsArray.reduce((sum, p) => { 
-    if (!p || !p.id) return sum;
-    const qty = cart[p.id] || 0; 
-    const itemPrice = Number(p.price) || 0;
-    return sum + (itemPrice * qty); 
-  }, 0);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorDisplay message={error} onRetry={loadInitialProducts} />;
@@ -158,11 +121,7 @@ const ProductList = () => {
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '32px 16px', fontFamily: 'system-ui, sans-serif', boxSizing: 'border-box', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* 🔍 SEARCH TOOLBAR & ADMIN ACTION BOX */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-        
-        {/* ĐÃ XÓA KHỐI DIV DEBUG HIỂN THỊ QUYỀN ĐỌC TẠI ĐÂY */}
-
         <div style={{ position: 'relative', width: '100%', maxWidth: '440px', display: 'flex', alignItems: 'center' }}>
           <span style={{ position: 'absolute', left: '16px', color: '#94a3b8', fontSize: '16px' }}>🔍</span>
           <input 
@@ -184,7 +143,6 @@ const ProductList = () => {
           />
         </div>
 
-        {/* 🌟 NÚT THÊM SẢN PHẨM MỚI CHÍNH THỨC HIỆN KHI LÀ ADMIN */}
         {isAdmin && (
           <button
             onClick={() => navigate('/admin/products/new')}
@@ -211,8 +169,6 @@ const ProductList = () => {
       </h2>
 
       <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start' }}>
-        
-        {/* ================= CỘT TRÁI: SIDEBAR & TÓM TẮT GIỎ HÀNG ================= */}
         <div style={{ 
           flex: '1', 
           minWidth: '290px', 
@@ -223,7 +179,6 @@ const ProductList = () => {
           position: 'sticky',
           top: '24px'
         }}>
-          {/* BOX 1: BỘ LỌC DANH MỤC */}
           <div style={{ 
             backgroundColor: '#ffffff', 
             borderRadius: '20px', 
@@ -262,7 +217,6 @@ const ProductList = () => {
             </div>
           </div>
 
-          {/* BOX 2: TÓM TẮT ĐƠN HÀNG */}
           <div style={{ 
             border: '1px solid #e2e8f0', 
             borderRadius: '20px', 
@@ -274,19 +228,18 @@ const ProductList = () => {
               🛒 Tóm tắt đơn hàng
             </h3>
             
-            {totalItems === 0 ? (
+            {items.length === 0 ? (
               <p style={{ color: '#94a3b8', fontSize: '13.5px', fontStyle: 'italic', textAlign: 'center', padding: '16px 0', margin: 0 }}>
                 Giỏ hàng đang trống.
               </p>
             ) : (
               <div style={{ marginBottom: '14px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
-                {safeAllProductsArray.map(p => {
-                  if (!p || !p.id) return null;
-                  const qty = cart[p.id] || 0;
+                {items.map(item => {
+                  const qty = item.quantity || 0;
                   if (qty === 0) return null;
                   return (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13.5px', color: '#334155', marginBottom: '10px', padding: '8px 10px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px', fontWeight: '500' }}>{p.name}</span>
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13.5px', color: '#334155', marginBottom: '10px', padding: '8px 10px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px', fontWeight: '500' }}>{item.name}</span>
                       <span style={{ fontWeight: '800', color: '#2563eb', backgroundColor: '#dbeafe', padding: '2px 8px', borderRadius: '6px', fontSize: '12px' }}>x{qty}</span>
                     </div>
                   );
@@ -297,7 +250,7 @@ const ProductList = () => {
             <div style={{ borderTop: '1px dashed #e2e8f0', margin: '14px 0', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', color: '#64748b', marginBottom: '10px' }}>
                 <span>Tổng sản phẩm:</span>
-                <span style={{ fontWeight: '700', color: '#0f172a', backgroundColor: '#f1f5f9', padding: '2px 8px', borderRadius: '20px', fontSize: '13px' }}>{totalItems}</span>
+                <span style={{ fontWeight: '700', color: '#0f172a', backgroundColor: '#f1f5f9', padding: '2px 8px', borderRadius: '20px', fontSize: '13px' }}>{totalQuantity}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13.5px', color: '#64748b', marginBottom: '20px' }}>
                 <span>Tổng thanh toán:</span>
@@ -307,18 +260,18 @@ const ProductList = () => {
 
             <button 
               onClick={handleCheckout}
-              disabled={totalItems === 0}
+              disabled={totalQuantity === 0}
               style={{
                 width: '100%',
                 padding: '14px',
                 borderRadius: '12px',
                 fontWeight: '700',
                 border: 'none',
-                backgroundColor: totalItems === 0 ? '#e2e8f0' : '#22c55e',
-                color: totalItems === 0 ? '#94a3b8' : '#fff',
-                cursor: totalItems === 0 ? 'not-allowed' : 'pointer',
+                backgroundColor: totalQuantity === 0 ? '#e2e8f0' : '#22c55e',
+                color: totalQuantity === 0 ? '#94a3b8' : '#fff',
+                cursor: totalQuantity === 0 ? 'not-allowed' : 'pointer',
                 fontSize: '14.5px',
-                boxShadow: totalItems === 0 ? 'none' : '0 4px 14px rgba(34, 197, 94, 0.2)',
+                boxShadow: totalQuantity === 0 ? 'none' : '0 4px 14px rgba(34, 197, 94, 0.2)',
                 transition: 'all 0.2s ease'
               }}
             >
@@ -327,7 +280,6 @@ const ProductList = () => {
           </div>
         </div>
 
-        {/* ================= CỘT PHẢI: LƯỚI SẢN PHẨM ================= */}
         <div style={{ flex: '3' }}>
           {filteredProducts.length > 0 ? (
             <div style={{ 
@@ -335,15 +287,18 @@ const ProductList = () => {
               gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
               gap: '24px' 
             }}>
-              {filteredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product} 
-                  quantity={cart[product.id] || 0}
-                  onUpdateCart={handleUpdateCart}
-                  onDelete={handleDeleteProduct}
-                />
-              ))}
+              {filteredProducts.map((product) => {
+                const cartItem = items.find(item => item.id === product.id);
+                return (
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    quantity={cartItem ? cartItem.quantity : 0}
+                    onUpdateCart={handleUpdateCart}
+                    onDelete={handleDeleteProduct}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '60px', border: '1px solid #e2e8f0', textAlign: 'center' }}>

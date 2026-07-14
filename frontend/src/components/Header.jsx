@@ -1,12 +1,26 @@
-// src/components/Header.jsx
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext'; // Giữ nguyên Context của sốp
+import { AuthContext } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 const Header = ({ title = "ShopHub" }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // Lấy vị trí trang hiện tại để làm hiệu ứng active
-  const { user, logout } = useContext(AuthContext); // Lấy user thật từ Context ra
+  const location = useLocation();
+  const { user, logout } = useContext(AuthContext);
+  const { totalQuantity } = useCart();
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (totalQuantity > 0) {
+      setIsAnimating(true);
+    }
+  }, [totalQuantity]);
+
+  useEffect(() => {
+    if (!isAnimating) return;
+    const timer = setTimeout(() => setIsAnimating(false), 300);
+    return () => clearTimeout(timer);
+  }, [isAnimating]);
 
   const handleLogoutClick = () => {
     logout();
@@ -14,7 +28,6 @@ const Header = ({ title = "ShopHub" }) => {
     navigate('/login');
   };
 
-  // Hàm kiểm tra xem menu có đang được chọn hay không để đổi màu active
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -28,8 +41,16 @@ const Header = ({ title = "ShopHub" }) => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
       fontFamily: 'system-ui, sans-serif'
     }}>
-      {/* Nhúng CSS hiệu ứng Hover & Active cực mượt */}
       <style>{`
+        @keyframes bouncePop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.3) rotate(-10deg); }
+          80% { transform: scale(0.9) rotate(5deg); }
+          100% { transform: scale(1) rotate(0); }
+        }
+        .cart-bounce-effect {
+          animation: bouncePop 0.3s ease-in-out !important;
+        }
         .nav-link {
           position: relative;
           color: #475569;
@@ -67,7 +88,7 @@ const Header = ({ title = "ShopHub" }) => {
           color: #ef4444;
           border: none;
           border-radius: 8px;
-          fontSize: 13px;
+          font-size: 13px;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -96,12 +117,10 @@ const Header = ({ title = "ShopHub" }) => {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        {/* Logo */}
         <Link to="/" style={{ fontSize: '26px', fontWeight: '850', color: '#0f172a', textDecoration: 'none', letterSpacing: '-0.5px' }}>
           {title}
         </Link>
 
-        {/* Menu Điều Hướng Đã Việt Hóa + Hiệu Ứng */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
           <Link to="/" className={`nav-link ${isActive('/') ? 'nav-active' : ''}`}>
             Trang Chủ
@@ -112,11 +131,38 @@ const Header = ({ title = "ShopHub" }) => {
           <Link to="/about" className={`nav-link ${isActive('/about') ? 'nav-active' : ''}`}>
             Giới Thiệu
           </Link>
-          <Link to="/cart" className={`nav-link ${isActive('/cart') ? 'nav-active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            Giỏ Hàng 🛒
+          
+          <Link 
+            to="/cart" 
+            className={`nav-link ${isActive('/cart') ? 'nav-active' : ''}`} 
+            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <div 
+              className={isAnimating ? 'cart-bounce-effect' : ''} 
+              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', transition: 'transform 0.2s' }}
+            >
+              <span>Giỏ Hàng 🛒</span>
+              {totalQuantity > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  right: '-14px',
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  borderRadius: '50%',
+                  padding: '2px 6px',
+                  textAlign: 'center',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                  lineHeight: '1'
+                }}>
+                  {totalQuantity}
+                </span>
+              )}
+            </div>
           </Link>
 
-          {/* Xử lý hiển thị động Tên User từ Context của sốp */}
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '2px solid #e2e8f0', paddingLeft: '20px' }}>
               <span style={{ fontSize: '14.5px', fontWeight: '650', color: '#334155' }}>

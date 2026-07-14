@@ -15,14 +15,36 @@ app.use((req, res, next) => {
 });
 
 let categories = [
-    { id: 1, name: "Quần áo" },
-    { id: 2, name: "Giày dép" }
+    { id: 1, name: "Điện thoại (iPhone)" },
+    { id: 2, name: "Máy tính (MacBook)" },
+    { id: 3, name: "Máy tính bảng (iPad)" }
 ];
 
 let products = [
-    { id: 1, name: "Áo thun ShopHub Unisex", price: 150000, categoryId: 1, image: "https://via.placeholder.com/150" },
-    { id: 2, name: "Quần Jean Baggy", price: 290000, categoryId: 1, image: "https://via.placeholder.com/150" },
-    { id: 3, name: "Giày Sneaker Trắng v2", price: 450000, categoryId: 2, image: "https://via.placeholder.com/150" }
+    { 
+        id: 1, 
+        name: "iPhone 16 Pro Max 256GB", 
+        price: 34990000, 
+        categoryId: 1, 
+        imageUrl: "https://via.placeholder.com/280",
+        description: "Siêu phẩm flagship mới nhất từ Apple sở hữu màn hình lớn hơn, camera zoom quang học 5x cực đỉnh và thời lượng pin vượt trội."
+    },
+    { 
+        id: 2, 
+        name: "MacBook Pro M4 14-inch", 
+        price: 49990000, 
+        categoryId: 2, 
+        imageUrl: "https://via.placeholder.com/280",
+        description: "Sức mạnh đồ họa đỉnh cao từ chip Apple M4 thế hệ mới, màn hình Liquid Retina XDR siêu sáng phù hợp cho mọi tác vụ chuyên nghiệp."
+    },
+    { 
+        id: 3, 
+        name: "iPad Air 6 M2 11-inch", 
+        price: 16990000, 
+        categoryId: 3, 
+        imageUrl: "https://via.placeholder.com/280",
+        description: "Mỏng nhẹ, mạnh mẽ vượt trội với chip Apple M2. Hỗ trợ đắc lực cho công việc văn phòng, vẽ sáng tạo và giải trí chất lượng cao."
+    }
 ];
 
 app.get('/api/categories', (req, res) => res.json(categories));
@@ -51,7 +73,7 @@ app.get('/api/products/:id', (req, res) => {
 });
 
 app.post('/api/products', (req, res) => {
-    const { name, price, categoryId } = req.body;
+    const { name, price, categoryId, description, imageUrl } = req.body;
     if (!name || !price || !categoryId) {
         return res.status(400).json({ message: "Vui lòng nhập đủ name, price và categoryId!" });
     }
@@ -60,7 +82,8 @@ app.post('/api/products', (req, res) => {
         name,
         price: Number(price),
         categoryId: Number(categoryId),
-        image: "https://via.placeholder.com/150"
+        imageUrl: imageUrl || "https://via.placeholder.com/280",
+        description: description || "Sản phẩm chính hãng chất lượng cao đến từ ShopHub."
     };
     products.push(newProduct);
     res.status(201).json(newProduct);
@@ -81,4 +104,4 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "Lỗi Server nội bộ!" });
 });
 
-app.listen(PORT, () => console.log(`Server dang chay tai port: ${PORT}`));
+app.listen(PORT, () => console.log(`Server đang chạy tại port: ${PORT}`));

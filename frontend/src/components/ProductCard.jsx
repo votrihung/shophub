@@ -1,17 +1,30 @@
-// src/components/ProductCard.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
-const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
-  // Trạng thái hover cho toàn bộ Card và nút bấm để điều khiển hiệu ứng mượt mà
+const ProductCard = ({ product, quantity, onDelete }) => {
+  const { addToCart, updateQuantity, removeFromCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
-  const [activeBtn, setActiveBtn] = useState(null); // 'minus' hoặc 'plus'
-  const [isDeleteHovered, setIsDeleteHovered] = useState(false); // Hover riêng cho nút xóa
+  const [activeBtn, setActiveBtn] = useState(null);
+  const [isDeleteHovered, setIsDeleteHovered] = useState(false);
 
-  // 🔍 LẤY ROLE TỪ LOCALSTORAGE ĐỂ PHÂN QUYỀN (MỤC 6.2 CỦA LAB)
   const rawUser = localStorage.getItem('shophub_user');
   const userObj = rawUser ? JSON.parse(rawUser) : null;
   const isAdmin = userObj?.role === 'ADMIN';
+
+  // Nhấn nút Trừ (-)
+  const handleDecrease = () => {
+    if (quantity <= 1) {
+      removeFromCart(product.id);
+    } else {
+      updateQuantity(product.id, quantity - 1);
+    }
+  };
+
+  // Nhấn nút Cộng (+)
+  const handleIncrease = () => {
+    addToCart(product, 1);
+  };
 
   return (
     <div 
@@ -22,17 +35,16 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
       }}
       style={{
         border: isHovered ? '1px solid #93c5fd' : '1px solid #e2e8f0',
-        borderRadius: '16px', // Bo góc mềm mại hơn chuẩn UI hiện đại
+        borderRadius: '16px',
         padding: '16px',
         backgroundColor: '#fff',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         textAlign: 'center',
         height: '100%',
         boxSizing: 'border-box',
-        // EFFECT 1: Rà chuột vào card sẽ nổi lên 3D và đổ bóng lan rộng cực mượt
         transform: isHovered ? 'translateY(-6px)' : 'translateY(0)',
         boxShadow: isHovered 
           ? '0 12px 24px -4px rgba(147, 197, 253, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.04)' 
@@ -41,7 +53,6 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
       }}
     >
       
-      {/* 🌟 1. BỌC LINK CHO KHUNG CHỨA ẢNH */}
       <Link to={`/products/${product.id}`} style={{ display: 'block', width: '100%', cursor: 'pointer', textDecoration: 'none' }}>
         <div style={{
           width: '100%',
@@ -62,7 +73,6 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
               maxWidth: '85%',
               maxHeight: '85%',
               objectFit: 'contain',
-              // EFFECT 2: Ảnh tự động zoom nhẹ phóng to 5% cực xịn khi hover vào card
               transform: isHovered ? 'scale(1.06)' : 'scale(1)',
               transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
@@ -70,15 +80,12 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
         </div>
       </Link>
 
-      {/* THÔNG TIN CHI TIẾT */}
       <div style={{ flexGrow: 1, marginBottom: '14px', width: '100%' }}>
-        
-        {/* 🌟 2. BỌC LINK CHO TÊN SẢN PHẨM */}
         <Link to={`/products/${product.id}`} style={{ textDecoration: 'none' }}>
           <h3 style={{ 
             fontSize: '15.5px', 
             fontWeight: '700', 
-            color: isHovered ? '#2563eb' : '#1e293b', // Đổi chữ sang xanh dương khi hover
+            color: isHovered ? '#2563eb' : '#1e293b',
             margin: '0 0 6px 0',
             cursor: 'pointer',
             lineHeight: '1.4',
@@ -97,23 +104,21 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          height: '36px' // Giữ layout các card đều tăm tắp
+          height: '36px'
         }}>
           {product.description || 'Hàng chính hãng VN/A'}
         </p>
         
-        <p style={{ fontSize: '17px', fontWeight: '800', color: '#ef4444', margin: '0', trackingTight: '-0.5px' }}>
+        <p style={{ fontSize: '17px', fontWeight: '800', color: '#ef4444', margin: '0' }}>
           {product.price?.toLocaleString('vi-VN')}đ
         </p>
       </div>
 
-      {/* KHU VỰC ĐIỀU KHIỂN GIỎ HÀNG & NÚT QUẢN TRỊ */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: 'auto', width: '100%' }}>
         
-        {/* BỘ NÚT TĂNG GIẢM SỐ LƯỢNG */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <button 
-            onClick={() => onUpdateCart(product.id, -1)}
+            onClick={handleDecrease}
             onMouseDown={() => setActiveBtn('minus')}
             onMouseUp={() => setActiveBtn(null)}
             style={{
@@ -129,7 +134,6 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
               justifyContent: 'center',
               fontSize: '16px',
               color: '#475569',
-              // EFFECT 3: Bấm nút trừ co lại nhẹ tạo phản hồi cơ học
               transform: activeBtn === 'minus' ? 'scale(0.9)' : 'scale(1)',
               boxShadow: activeBtn === 'minus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
               transition: 'all 0.15s ease',
@@ -144,7 +148,7 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
           <span style={{ 
             fontSize: '15px', 
             fontWeight: '800', 
-            color: quantity > 0 ? '#2563eb' : '#475569', // Nhảy màu xanh nổi bật khi số lượng > 0
+            color: quantity > 0 ? '#2563eb' : '#475569',
             minWidth: '20px',
             transition: 'color 0.2s'
           }}>
@@ -152,7 +156,7 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
           </span>
 
           <button 
-            onClick={() => onUpdateCart(product.id, 1)}
+            onClick={handleIncrease}
             onMouseDown={() => setActiveBtn('plus')}
             onMouseUp={() => setActiveBtn(null)}
             style={{
@@ -168,7 +172,6 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
               justifyContent: 'center',
               fontSize: '16px',
               color: '#475569',
-              // EFFECT 4: Bấm nút cộng co lại nhẹ tạo phản hồi cơ học
               transform: activeBtn === 'plus' ? 'scale(0.9)' : 'scale(1)',
               boxShadow: activeBtn === 'plus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
               transition: 'all 0.15s ease',
@@ -181,7 +184,6 @@ const ProductCard = ({ product, quantity, onUpdateCart, onDelete }) => {
           </button>
         </div>
 
-        {/* 🚨 BỔ SUNG: NÚT XÓA CHỈ DÀNH RIÊNG CHO ADMIN (MỤC 6.2 CỦA LAB) */}
         {isAdmin && (
           <button
             onClick={() => onDelete && onDelete(product.id)}
