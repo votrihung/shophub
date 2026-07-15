@@ -10,6 +10,9 @@ const Header = ({ title = "ShopHub" }) => {
   const { totalQuantity } = useCart();
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Nhận diện vai trò Admin từ AuthContext
+  const isAdmin = user?.role === 'ADMIN';
+
   useEffect(() => {
     if (totalQuantity > 0) {
       setIsAnimating(true);
@@ -132,6 +135,20 @@ const Header = ({ title = "ShopHub" }) => {
             Giới Thiệu
           </Link>
           
+          {/* Lịch sử đơn hàng dành cho mọi người dùng đã đăng nhập */}
+          {user && (
+            <Link to="/orders/history" className={`nav-link ${isActive('/orders/history') ? 'nav-active' : ''}`}>
+              Lịch Sử 
+            </Link>
+          )}
+
+          {/* Nút Quản Lý Đơn Hàng chỉ hiển thị cho tài khoản ADMIN */}
+          {user && isAdmin && (
+            <Link to="/admin/orders" className={`nav-link ${isActive('/admin/orders') ? 'nav-active' : ''}`}>
+              Quản lý Đơn ⚙️
+            </Link>
+          )}
+
           <Link 
             to="/cart" 
             className={`nav-link ${isActive('/cart') ? 'nav-active' : ''}`} 
@@ -141,7 +158,7 @@ const Header = ({ title = "ShopHub" }) => {
               className={isAnimating ? 'cart-bounce-effect' : ''} 
               style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', transition: 'transform 0.2s' }}
             >
-              <span>Giỏ Hàng 🛒</span>
+              <span>Giỏ Hàng </span>
               {totalQuantity > 0 && (
                 <span style={{
                   position: 'absolute',

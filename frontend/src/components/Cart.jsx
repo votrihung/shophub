@@ -1,4 +1,4 @@
-// Giao diện trang Giỏ hàng & Thanh toán độc lập
+// Giao diện trang Giỏ hàng & Thanh toán (Cart.jsx) - Kết nối Database PostgreSQL thật
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productsApi } from '../api/productsApi';
@@ -70,21 +70,53 @@ const Cart = () => {
     setShippingInfo(prev => ({ ...prev, [name]: value }));
   };
 
-  // Xử lý nút bấm Đặt hàng cuối cùng
-  const handleSubmitOrder = (e) => {
+  // CẬP NHẬT KẾT NỐI API THỰC TẾ LƯU VÀO DATABASE
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.address) {
-      alert('vui lòng điền đầy đủ các thông tin có dấu (*) nha!');
+      alert('Vui lòng điền đầy đủ các thông tin có dấu (*) nha!');
       return;
     }
 
-    // Thông báo đặt hàng thành công (Mốt mình kết nối xuống DB PostgreSQL sau)
-    alert(`🎉 Đặt hàng thành công!\nXin cảm ơn bác ${shippingInfo.fullName}.\nĐơn hàng sẽ được gửi tới địa chỉ: ${shippingInfo.address}`);
-    
-    // Reset sạch giỏ hàng sau khi mua thành công
-    setCart({});
-    localStorage.removeItem('shophub_cart');
-    navigate('/products'); // Đá người dùng về trang sản phẩm
+    // 1. Chuẩn bị danh sách sản phẩm mua
+    const orderItems = cartItems.map(item => ({
+      product_id: item.id,
+      name: item.name,
+      price: Number(item.price),
+      quantity: cart[item.id]
+    }));
+
+    try {
+      const token = localStorage.getItem('shophub_token') || '';
+
+      // 2. Gửi request POST tới FastAPI Backend
+      const response = await fetch('http://localhost:8000/orders/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          items: orderItems
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Không thể gửi đơn hàng lên máy chủ.');
+      }
+
+      // 3. Thông báo nổ đơn thành công và lưu vào PostgreSQL
+      alert(`🎉 BẤM ĐỂ TEST CODE MỚI vào Database!\nXin cảm ơn bác ${shippingInfo.fullName}.\nĐơn hàng đã được lưu trữ trên hệ thống PostgreSQL thành công mỹ mãn!`);
+      
+      // Xóa sạch giỏ hàng sau khi mua thành công
+      setCart({});
+      localStorage.removeItem('shophub_cart');
+      navigate('/products');
+    } catch (err) {
+      console.error("Lỗi đặt hàng:", err);
+      alert(`❌ Có lỗi xảy ra khi gửi đơn hàng: ${err.message}`);
+    }
   };
 
   // Lọc ra các sản phẩm thực sự đang có trong giỏ hàng để hiển thị
@@ -109,39 +141,35 @@ const Cart = () => {
       ) : (
         <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
           
-          {/* CỘT TRÁI: DANH SÁCH CHI TIẾT SẢN PHẨM TRONG GIỎ */}
+          {/* CỘT TRÁI: DANH SÁCH SẢN PHẨM */}
           <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {cartItems.map(item => (
               <div key={item.id} style={{ display: 'flex', gap: '16px', backgroundColor: '#fff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
-                {/* Ảnh mô tả sản phẩm */}
                 <img 
                   src={item.image_url || 'https://via.placeholder.com/80'} 
                   alt={item.name} 
                   style={{ width: '80px', height: '80px', objectFit: 'contain', backgroundColor: '#f8fafc', borderRadius: '8px' }} 
                 />
                 
-                {/* Tên & Giá tiền */}
                 <div style={{ flex: '1' }}>
                   <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>{item.name}</h4>
                   <p style={{ margin: 0, color: '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>{Number(item.price).toLocaleString('vi-VN')}đ</p>
                 </div>
 
-                {/* Tăng giảm số lượng tại chỗ */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', border: '1px solid #cbd5e1', borderRadius: '20px', padding: '4px 12px', backgroundColor: '#f8fafc' }}>
                   <button onClick={() => updateQuantity(item.id, -1)} style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 'bold', width: '16px', color: '#64748b' }}>-</button>
                   <span style={{ fontSize: '14px', fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{cart[item.id]}</span>
                   <button onClick={() => updateQuantity(item.id, 1)} style={{ border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 'bold', width: '16px', color: '#64748b' }}>+</button>
                 </div>
 
-                {/* Nút thùng rác xóa hẳn sản phẩm */}
-                <button onClick={() => removeProduct(item.id)} style={{ border: 'none', backgroundColor: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', padding: '0 8px', transition: 'color 0.2s' }} onMouseOver={(e)=>e.target.style.color='#ef4444'} onMouseOut={(e)=>e.target.style.color='#94a3b8'} title="Xóa sản phẩm khỏi giỏ">
+                <button onClick={() => removeProduct(item.id)} style={{ border: 'none', backgroundColor: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', padding: '0 8px', transition: 'color 0.2s' }} onMouseOver={(e)=>e.target.style.color='#ef4444'} onMouseOut={(e)=>e.target.style.color='#94a3b8'} title="Xóa sản phẩm">
                   🗑️
                 </button>
               </div>
             ))}
           </div>
 
-          {/* CỘT PHẢI: FORM ĐIỀN ĐỊA CHỈ NHẬN HÀNG */}
+          {/* CỘT PHẢI: FORM GIAO HÀNG */}
           <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '700', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', color: '#0f172a' }}>📋 Thông tin nhận hàng</h3>
             

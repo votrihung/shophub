@@ -18,8 +18,9 @@ app.add_middleware(
 from database import engine, Base
 import models.product
 import models.user
+import models.order
 
-from routers import products, auth 
+from routers import products, auth, orders
 
 Base.metadata.create_all(bind=engine)
 
@@ -30,6 +31,7 @@ app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
 
 app.include_router(products.router)  
 app.include_router(auth.router)      
+app.include_router(orders.router)
 
 @app.get("/")
 def read_root():
