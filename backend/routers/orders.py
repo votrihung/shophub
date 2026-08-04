@@ -26,6 +26,15 @@ def get_all_orders_admin(
         )
     
     orders = db.query(OrderDB).order_by(OrderDB.id.desc()).all()
+    
+    for order in orders:
+        for item in order.items:
+            product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+            if product:
+                item.image_url = getattr(product, "image_url", None) or getattr(product, "image", None) or getattr(product, "image_path", None)
+            else:
+                item.image_url = None
+
     return orders
 
 @router.get("/history")
@@ -39,12 +48,18 @@ def get_order_history(
     for order in orders:
         items_data = []
         for item in order.items:
+            product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+            img_url = None
+            if product:
+                img_url = getattr(product, "image_url", None) or getattr(product, "image", None) or getattr(product, "image_path", None)
+
             items_data.append({
                 "id": item.id,
                 "product_name": item.product_name,
                 "quantity": item.quantity,
                 "product_price": float(item.product_price),
-                "line_total": float(item.line_total)
+                "line_total": float(item.line_total),
+                "image_url": img_url
             })
 
         result.append({
@@ -53,6 +68,9 @@ def get_order_history(
             "status": order.status,
             "total_amount": float(order.total_amount),
             "created_at": order.created_at.isoformat() if order.created_at else None,
+            "customer_name": order.customer_name,
+            "phone": order.phone,
+            "shipping_address": order.shipping_address,
             "items": items_data
         })
     return result
@@ -76,6 +94,13 @@ def get_order_detail(
             detail="Bạn không có quyền xem đơn hàng này."
         )
     
+    for item in order.items:
+        product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+        if product:
+            item.image_url = getattr(product, "image_url", None) or getattr(product, "image", None) or getattr(product, "image_path", None)
+        else:
+            item.image_url = None
+
     return order
 
 @router.put("/{order_id}/status", response_model=OrderRead)
@@ -108,6 +133,97 @@ def update_order_status(
     order.status = new_status
     db.commit()
     db.refresh(order)
+
+    for item in order.items:
+        product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+        if product:
+            item.image_url = getattr(product, "image_url", None) or getattr(product, "image", None) or getattr(product, "image_path", None)
+        else:
+            item.image_url = None
+
+    return order
+
+@router.post("/{order_id}/cancel", response_model=OrderRead)
+def cancel_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    order = db.query(OrderDB).filter(OrderDB.id == order_id).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy đơn hàng."
+        )
+
+    if current_user.role != "ADMIN" and order.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thực hiện hành động này."
+        )
+
+    if order.status != "PLACED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Đơn hàng chỉ có thể hủy khi ở trạng thái 'Chờ xác nhận' (PLACED)."
+        )
+
+    order.status = "CANCELED"
+
+    for item in order.items:
+        product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+        if product:
+            product.stock += item.quantity
+
+    db.commit()
+    db.refresh(order)
+
+    for item in order.items:
+        product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+        if product:
+            item.image_url = getattr(product, "image_url", None) or getattr(product, "image", None) or getattr(product, "image_path", None)
+        else:
+            item.image_url = None
+
+    return order
+
+@router.patch("/{order_id}/info", response_model=OrderRead)
+def update_order_customer_info(
+    order_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thực hiện hành động này."
+        )
+
+    order = db.query(OrderDB).filter(OrderDB.id == order_id).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy đơn hàng."
+        )
+
+    if "customer_name" in payload:
+        order.customer_name = payload["customer_name"]
+    if "phone" in payload:
+        order.phone = payload["phone"]
+    if "shipping_address" in payload:
+        order.shipping_address = payload["shipping_address"]
+
+    db.commit()
+    db.refresh(order)
+
+    for item in order.items:
+        product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()
+        if product:
+            item.image_url = getattr(product, "image_url", None) or getattr(product, "image", None) or getattr(product, "image_path", None)
+        else:
+            item.image_url = None
+
     return order
 
 @router.patch("/{order_id}/items/quantity", response_model=OrderRead)
@@ -184,6 +300,14 @@ def admin_update_order_item_quantity(
 
     db.commit()
     db.refresh(order)
+
+    for order_item in order.items:
+        prod = db.query(ProductDB).filter(ProductDB.id == order_item.product_id).first()
+        if prod:
+            order_item.image_url = getattr(prod, "image_url", None) or getattr(prod, "image", None) or getattr(prod, "image_path", None)
+        else:
+            order_item.image_url = None
+
     return order
 
 @router.post("/checkout", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
@@ -199,11 +323,19 @@ def checkout(
         total_amount = 0
         order_items_to_create = []
 
+        cust_name = request.customer_name or getattr(current_user, 'full_name', getattr(current_user, 'username', 'Khách lẻ'))
+        cust_phone = request.phone or getattr(current_user, 'phone', '---')
+        cust_address = request.shipping_address or getattr(current_user, 'address', 'Chưa cung cấp')
+
         new_order = OrderDB(
             user_id=current_user.id,
             status="PLACED",
-            total_amount=0
+            total_amount=0,
+            customer_name=cust_name,
+            phone=cust_phone,
+            shipping_address=cust_address
         )
+
         db.add(new_order)
         db.flush() 
 
@@ -241,6 +373,14 @@ def checkout(
         
         db.commit()
         db.refresh(new_order)
+
+        for created_item in new_order.items:
+            prod = db.query(ProductDB).filter(ProductDB.id == created_item.product_id).first()
+            if prod:
+                created_item.image_url = getattr(prod, "image_url", None) or getattr(prod, "image", None) or getattr(prod, "image_path", None)
+            else:
+                created_item.image_url = None
+
         return new_order
 
     except HTTPException as he:

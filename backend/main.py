@@ -6,7 +6,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+# 1. Biến app bắt buộc phải có ở đây
 app = FastAPI(title="ShopHub Product API với PostgreSQL", version="2.0.0")
+
+# 2. Cấu hình CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  

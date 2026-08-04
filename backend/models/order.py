@@ -12,9 +12,14 @@ class OrderDB(Base):
     total_amount = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    customer_name = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    shipping_address = Column(String(500), nullable=True)
+    admin_note = Column(String(500), nullable=True)
+
     user = relationship("User", backref="orders")
-    
     items = relationship("OrderItemDB", back_populates="order", cascade="all, delete-orphan")
+
 
 class OrderItemDB(Base):
     __tablename__ = "order_items"

@@ -1,9 +1,7 @@
-import AdminOrderDetailPage from './pages/AdminOrderDetailPage';
-import OrderDetailPage from './pages/OrderDetailPage';
-import AdminOrdersPage from './pages/AdminOrdersPage';
-import OrderHistoryPage from './pages/OrderHistoryPage';
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom'; 
+import axios from 'axios'; 
+
 import Header from './components/Header';
 import Banner from './components/Banner';
 import ProductList from './components/ProductList'; 
@@ -13,14 +11,19 @@ import About from './pages/About';
 import Home from './pages/Home'; 
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
+import CartPage from './pages/CartPage';
+
+import AdminOrdersPage from './pages/AdminOrdersPage';
+import AdminOrderDetailPage from './pages/AdminOrderDetailPage';
+import AdminAddProductPage from './pages/AdminAddProductPage';
+
+import OrderHistoryPage from './pages/OrderHistoryPage';
+import OrderDetailPage from './pages/OrderDetailPage';
+
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext'; 
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute'; 
-import axios from 'axios'; 
-
-import CartPage from './pages/CartPage';
-import AdminAddProductPage from './pages/AdminAddProductPage';
 
 const App = () => {
   useEffect(() => {
@@ -42,8 +45,8 @@ const App = () => {
         const sentToken = error.config?.headers?.Authorization;
         const isAdminRoute = window.location.pathname.includes('/admin');
 
-        if (!isAuthPage && !isAdminRoute && sentToken && error.response && (error.response.status === 401 || error.response.status === 404)) {
-          alert("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại!");
+        if (!isAuthPage && !isAdminRoute && sentToken && error.response && error.response.status === 401) {
+          alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
           localStorage.removeItem('shophub_token'); 
           localStorage.removeItem('shophub_cart');  
           window.location.href = '/login';          
@@ -67,7 +70,11 @@ const App = () => {
           <div style={{ flex: 1 }}>
             <Routes>
               <Route path="/" element={<Home />} />
-              
+              <Route path="/about" element={<About />} />
+              <Route path="/gioi-thieu" element={<About />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+
               <Route 
                 path="/products" 
                 element={
@@ -76,7 +83,6 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
-              
               <Route 
                 path="/products/:id" 
                 element={
@@ -85,10 +91,6 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
-              
-              <Route path="/about" element={<About />} />
-              <Route path="/gioi-thieu" element={<About />} />
-              
               <Route 
                 path="/cart" 
                 element={
@@ -97,7 +99,6 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
-
               <Route 
                 path="/orders/history" 
                 element={
@@ -106,7 +107,6 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
-
               <Route 
                 path="/orders/:id" 
                 element={
@@ -115,9 +115,6 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
-              
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
               
               <Route element={<AdminRoute />}>
                 <Route path="/admin/products/new" element={<AdminAddProductPage />} />
@@ -128,9 +125,9 @@ const App = () => {
               <Route
                 path="*"
                 element={
-                  <section style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', minHeight: '60vh' }}>
-                    <h2>Page not found</h2>
-                    <p>The page you are looking for does not exist.</p>
+                  <section style={{ padding: '40px 24px', maxWidth: '1200px', margin: '0 auto', textAlign: 'center', minHeight: '60vh' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>404 - Trang không tồn tại</h2>
+                    <p style={{ color: '#64748b', marginTop: '8px' }}>Đường dẫn bạn truy cập không tồn tại trên hệ thống.</p>
                   </section>
                 }
               />

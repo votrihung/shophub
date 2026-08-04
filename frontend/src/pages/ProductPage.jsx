@@ -1,4 +1,3 @@
-// src/pages/ProductPage.jsx
 import { useEffect, useState } from 'react';
 import { productsApi } from '../api/productsApi';
 import ProductList from '../components/ProductList';
@@ -10,7 +9,6 @@ const ProductPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState({}); 
 
   const loadProducts = async () => {
     setLoading(true);
@@ -20,7 +18,8 @@ const ProductPage = () => {
       if (searchTerm.trim() !== '') {
         data = await productsApi.searchProduct(searchTerm);
       } else {
-        data = await productsApi.getAll();
+        // Tăng size=50 để kéo hết đồ mới lên xem dễ dàng
+        data = await productsApi.getAll(1, 50); 
       }
       
       if (data && data.products && Array.isArray(data.products)) {
@@ -41,25 +40,13 @@ const ProductPage = () => {
     loadProducts();
   }, [searchTerm]);
 
-  const handleUpdateCart = (productId, amount) => {
-    setCart(prev => {
-      const currentQty = prev[productId] || 0;
-      const newQty = currentQty + amount;
-      if (newQty <= 0) {
-        const { [productId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [productId]: newQty };
-    });
-  };
-
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorDisplay message={error} onRetry={loadProducts} />;
 
   return (
     <div className="container mx-auto p-6">
-      {/* Kế thừa gọi thẳng Component hiển thị tích hợp nút Admin bên trong */}
-      <ProductList />
+      {/* Đã truyền trực tiếp state products thu được từ API xuống cho ProductList */}
+      <ProductList products={products} />
     </div>
   );
 };

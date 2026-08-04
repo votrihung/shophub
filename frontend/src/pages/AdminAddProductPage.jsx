@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { productsApi } from '../api/productsApi'; 
+import { productsApi } from '../api/productsApi';
 
 const AdminAddProductPage = () => {
   const navigate = useNavigate();
@@ -30,12 +30,13 @@ const AdminAddProductPage = () => {
     try {
       const data = new FormData();
       data.append('name', formData.name);
-      data.append('description', formData.description);
-      data.append('price', formData.price);
+      data.append('description', formData.description || '');
+      data.append('price', parseFloat(formData.price));
       data.append('category', formData.category);
-      data.append('stock', formData.stock);
-      
-      const calculatedCostPrice = Math.round(Number(formData.price) * 0.8).toString();
+      data.append('stock', parseInt(formData.stock, 10));
+
+      // Tự động tính costPrice (80% giá bán) gửi lên cho Backend khỏi bắt lỗi
+      const calculatedCostPrice = Math.round(Number(formData.price) * 0.8);
       data.append('costPrice', calculatedCostPrice);
 
       if (imageFile) {
@@ -43,11 +44,12 @@ const AdminAddProductPage = () => {
       }
 
       await productsApi.create(data);
-      alert('Thành công: Đã thêm mới sản phẩm vào hệ thống.');
-      navigate('/products');
-    } catch (err) {
-      console.error(err);
+      alert('✅ Thành công: Đã lưu sản phẩm vào hệ thống!');
       
+      // Load lại trang để kéo dữ liệu mới từ DB
+      window.location.href = '/products';
+    } catch (err) {
+      console.error('Lỗi thêm sản phẩm:', err);
       let errorMsg = err.message;
       if (err.response?.data?.detail) {
         if (typeof err.response.data.detail === 'object') {
@@ -56,7 +58,6 @@ const AdminAddProductPage = () => {
           errorMsg = err.response.data.detail;
         }
       }
-      
       alert('❌ Lỗi lưu sản phẩm từ Server Backend:\n' + errorMsg);
     } finally {
       setLoading(false);
@@ -107,7 +108,7 @@ const AdminAddProductPage = () => {
         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
           <button type="button" onClick={() => navigate('/products')} style={{ flex: 1, padding: '12px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Hủy Bỏ</button>
           <button type="submit" disabled={loading} style={{ flex: 2, padding: '12px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-            {loading ? 'Đang gửi dữ liệu lên DB...' : 'Lưu Sản Phẩm Xuống DB 🚀'}
+            {loading ? 'Đang lưu...' : 'Lưu Sản Phẩm Xuống DB 🚀'}
           </button>
         </div>
       </form>

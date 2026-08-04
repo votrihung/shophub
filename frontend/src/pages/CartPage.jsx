@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext'; 
 import axios from 'axios'; 
@@ -15,6 +15,33 @@ const CartPage = () => {
   });
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem('shophub_token');
+      if (!token) return;
+
+      try {
+        // Đã cập nhật endpoint sang /auth/me
+        const response = await axios.get('http://localhost:8000/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const user = response.data;
+        if (user) {
+          setShippingInfo(prev => ({
+            ...prev,
+            fullName: user.full_name || user.name || user.username || user.email || prev.fullName,
+            phone: user.phone || user.phone_number || prev.phone,
+            address: user.address || user.shipping_address || prev.address
+          }));
+        }
+      } catch (err) {
+        console.error("Không thể tự động tải thông tin tài khoản:", err);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -33,22 +60,30 @@ const CartPage = () => {
     const orderItems = items.map(item => ({
       product_id: item.id,
       quantity: item.quantity,
-      name: item.name,                 
-      price: Number(item.price)         
+      name: item.name,        
+      price: Number(item.price)        
     }));
 
     try {
       const token = localStorage.getItem('shophub_token') || '';
 
-     
-      const response = await axios.post('http://localhost:8000/orders/checkout', {
-        items: orderItems
-      }, {
+      const payload = {
+        items: orderItems,
+        customer_name: shippingInfo.fullName,
+        phone: shippingInfo.phone,
+        shipping_address: shippingInfo.address,
+        note: shippingInfo.note,
+        recipient_name: shippingInfo.fullName,
+        full_name: shippingInfo.fullName,
+        address: shippingInfo.address
+      };
+
+      const response = await axios.post('http://localhost:8000/orders/checkout', payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
       if (response.status === 200 || response.status === 201) {
-        alert(`🎉 Đặt hàng thành công!\nXin cảm ơn bác ${shippingInfo.fullName}.\nĐơn hàng đã được lưu trữ trên hệ thống PostgreSQL thành công mỹ mãn!`);
+        alert(`🎉 Đặt hàng thành công!\nXin cảm ơn ${shippingInfo.fullName}.\nĐơn hàng đã được lưu trữ thành công!`);
         clearCart(); 
         navigate('/products'); 
       } else {
@@ -75,7 +110,7 @@ const CartPage = () => {
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
           <span style={{ fontSize: '50px' }}>🛍️</span>
-          <p style={{ color: '#64748b', margin: '16px 0 24px 0', fontStyle: 'italic' }}>Giỏ hàng hiện tại đang trống rỗng .</p>
+          <p style={{ color: '#64748b', margin: '16px 0 24px 0', fontStyle: 'italic' }}>Giỏ hàng hiện tại đang trống rỗng.</p>
           <button onClick={() => navigate('/products')} style={{ padding: '12px 24px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
             Quay lại trang sản phẩm mua sắm
           </button>

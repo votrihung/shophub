@@ -88,14 +88,21 @@ const OrderHistoryPage = () => {
                 <th style={{ padding: '16px', fontWeight: '700' }}>Sản Phẩm</th>
                 <th style={{ padding: '16px', fontWeight: '700', textAlign: 'right' }}>Tổng Thanh Toán</th>
                 <th style={{ padding: '16px', fontWeight: '700', textAlign: 'center' }}>Trạng Thái</th>
+                <th style={{ padding: '16px', fontWeight: '700', textAlign: 'center' }}>Thao Tác</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => {
                 const badge = getStatusBadgeData(order.status);
+                const totalAmount = order.total_amount ?? order.total_price ?? 0;
                 return (
                   <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td style={{ padding: '16px', fontWeight: 'bold', color: '#3b82f6' }}>#{order.id}</td>
+                    <td 
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                      style={{ padding: '16px', fontWeight: 'bold', color: '#3b82f6', cursor: 'pointer' }}
+                    >
+                      #{order.id}
+                    </td>
                     <td style={{ padding: '16px', color: '#64748b' }}>
                       {new Date(order.created_at).toLocaleString('vi-VN')}
                     </td>
@@ -104,7 +111,7 @@ const OrderHistoryPage = () => {
                         {order.items && order.items.length > 0 ? (
                           order.items.map((item) => (
                             <div key={item.id} style={{ fontSize: '13px', color: '#1e293b' }}>
-                              • <span style={{ fontWeight: '600' }}>{item.product_name}</span> 
+                              • <span style={{ fontWeight: '600' }}>{item.product_name || item.name}</span> 
                               <span style={{ color: '#64748b', marginLeft: '6px' }}>(x{item.quantity})</span>
                             </div>
                           ))
@@ -114,12 +121,29 @@ const OrderHistoryPage = () => {
                       </div>
                     </td>
                     <td style={{ padding: '16px', fontWeight: 'bold', color: '#ef4444', textAlign: 'right' }}>
-                      {Number(order.total_amount).toLocaleString('vi-VN')}đ
+                      {Number(totalAmount).toLocaleString('vi-VN')}đ
                     </td>
                     <td style={{ padding: '16px', textAlign: 'center' }}>
                       <span style={badge.style}>
                         {badge.text}
                       </span>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <button
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        style={{
+                          padding: '6px 14px',
+                          backgroundColor: '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Chi tiết
+                      </button>
                     </td>
                   </tr>
                 );

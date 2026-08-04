@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
-from datetime import datetime  # 🚀 Bổ sung import datetime để xử lý đồng bộ kiểu dữ liệu
+from datetime import datetime
 
 
 class OrderItemCreate(BaseModel):
@@ -9,8 +9,13 @@ class OrderItemCreate(BaseModel):
     price: float
     quantity: int = Field(..., gt=0)
 
+
 class CheckoutRequest(BaseModel):
     items: List[OrderItemCreate]
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    shipping_address: Optional[str] = None
+
 
 class OrderItemRead(BaseModel):
     id: int
@@ -19,25 +24,35 @@ class OrderItemRead(BaseModel):
     product_price: float
     quantity: int
     line_total: float
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True
+
 
 class OrderRead(BaseModel):
     id: int
     status: str
     total_amount: float
-    created_at: datetime  # 🚀 Đã sửa từ str -> datetime để parse chuẩn xác kiểu dữ liệu từ DB
+    created_at: datetime
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    shipping_address: Optional[str] = None
+    admin_note: Optional[str] = None
     items: List[OrderItemRead]
 
     class Config:
         from_attributes = True
 
+
 class OrderSummary(BaseModel):
     id: int
     status: str
     total_amount: float
-    created_at: datetime  # 🚀 Đã sửa từ str -> datetime để tránh lỗi trên các API danh sách/tổng quan
+    created_at: datetime
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    shipping_address: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -45,8 +60,13 @@ class OrderSummary(BaseModel):
 
 ALLOWED_STATUSES = ["PLACED", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELED"]
 
+
 class OrderStatusUpdate(BaseModel):
     status: str
+    admin_note: Optional[str] = None
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    shipping_address: Optional[str] = None
 
     @field_validator("status")
     @classmethod
@@ -54,6 +74,7 @@ class OrderStatusUpdate(BaseModel):
         if v not in ALLOWED_STATUSES:
             raise ValueError(f"Trạng thái không hợp lệ. Phải thuộc: {ALLOWED_STATUSES}")
         return v
+
 
 class OrderItemQuantityUpdate(BaseModel):
     item_id: int

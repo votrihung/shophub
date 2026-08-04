@@ -2,20 +2,19 @@ import axios from 'axios';
 import axiosClient from './axiosClient';
 
 export const productsApi = {
-  // Trỏ thẳng sang endpoint của Backend ở cổng 8000 để tránh trùng router Frontend
-  getAll: () => {
-    return axiosClient.get('http://localhost:8000/products');
+  getAll: (page = 1, size = 6) => {
+    return axiosClient.get(`http://localhost:8000/products?page=${page}&size=${size}`);
   },
+
   getById: (id) => {
     return axiosClient.get(`http://localhost:8000/products/${id}`);
   },
+
   searchProduct: (query) => {
-    return axiosClient.get(`http://localhost:8000/products/search?query=${query}`);
+    return axiosClient.get(`http://localhost:8000/products/search?query=${encodeURIComponent(query)}`);
   },
 
-  // 🚀 HÀM MỚI TỐI THƯỢNG: Thêm sản phẩm dùng Axios thuần để vượt qua bộ chặn đá Login của axiosClient
   create: async (formData) => {
-    // Lấy token giả định từ localStorage nếu Backend cần đọc user id
     const rawLocal = localStorage.getItem('shophub_user');
     const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
     const fakeToken = `shophub-session-${parsedLocal?.id || 1}`;
@@ -29,9 +28,7 @@ export const productsApi = {
     return response.data;
   },
 
-  // 🚨 HÀM XÓA CẬP NHẬT MỚI: Dùng Axios thuần + Ép kiểu ID + Gửi Token để đập tan lỗi 422!
   delete: async (id) => {
-    // Lấy token giả định từ localStorage tương tự hàm create để Backend xác thực quyền Admin nếu cần
     const rawLocal = localStorage.getItem('shophub_user');
     const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
     const fakeToken = `shophub-session-${parsedLocal?.id || 1}`;

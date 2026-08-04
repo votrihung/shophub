@@ -2,13 +2,12 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query, Form
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, text
 from typing import Optional, List
 
 from database import get_db
 from models.product import ProductDB
-from schemas.product import ProductUpdate, ProductRead
-
-from .auth import require_admin
+from schemas.product import ProductRead, ProductUpdate
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -29,15 +28,18 @@ def get_all_products(
     if search:
         query = query.filter(ProductDB.name.ilike(f"%{search}%"))
         
-    if category:
+    if category and category != "All":
         query = query.filter(ProductDB.category.ilike(f"%{category}%"))
         
     total_items = query.count()
+    total_pages = (total_items + size - 1) // size
     start_idx = (page - 1) * size
-    products = query.offset(start_idx).limit(size).all()
+    
+    products = query.order_by(desc(ProductDB.id)).offset(start_idx).limit(size).all()
     
     return {
         "total": total_items,
+        "totalPages": total_pages,
         "page": page,
         "size": size,
         "products": [
@@ -45,7 +47,8 @@ def get_all_products(
                 id=p.id, 
                 name=p.name, 
                 description=p.description,
-                price=p.price,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          category=p.category, 
+                price=p.price, 
+                category=p.category, 
                 stock=p.stock, 
                 imageUrl=p.image_path
             ) for p in products
@@ -62,10 +65,7 @@ def get_product_detail(product_id: int, db: Session = Depends(get_db)):
         price=product.price, category=product.category, stock=product.stock, imageUrl=product.image_path
     )
 
-@router.post(
-    "", 
-    status_code=201
-)
+@router.post("", status_code=201)
 async def create_product(
     name: str = Form(...),
     description: Optional[str] = Form(None),
@@ -116,7 +116,6 @@ def update_product(product_id: int, updated_data: ProductUpdate, db: Session = D
     if "imageUrl" in update_dict:
         product.image_path = update_dict.pop("imageUrl")
         
-    # Cập nhật an toàn các trường còn lại vào database
     for key, value in update_dict.items():
         setattr(product, key, value)
         
@@ -127,21 +126,33 @@ def update_product(product_id: int, updated_data: ProductUpdate, db: Session = D
         price=product.price, category=product.category, stock=product.stock, imageUrl=product.image_path
     )
 
-@router.delete(
-    "/{product_id}",
-    dependencies=[Depends(require_admin)]
-)
+@router.delete("/{product_id}")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm!")
-        
-    if product.image_path:
-        filename = product.image_path.split("/images/")[-1]
-        image_path = os.path.join(IMAGE_DIR, filename)
-        if os.path.exists(image_path):
-            os.remove(image_path)
+    try:
+        product = db.query(ProductDB).filter(ProductDB.id == product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm!")
             
-    db.delete(product)
-    db.commit()
-    return {"status": "success", "message": "Đã xóa sản phẩm thành công khỏi PostgreSQL!"}
+        if product.image_path and "/images/" in product.image_path:
+            try:
+                filename = product.image_path.split("/images/")[-1]
+                image_path = os.path.join(IMAGE_DIR, filename)
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+            except Exception:
+                pass
+                
+        db.execute(text("DELETE FROM order_items WHERE product_id = :pid"), {"pid": product_id})
+        
+        db.delete(product)
+        db.commit()
+        return {"status": "success", "message": "Đã xóa sản phẩm thành công khỏi PostgreSQL!"}
+        
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Lỗi Server Backend khi xóa sản phẩm: {str(e)}"
+        )

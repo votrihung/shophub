@@ -24,6 +24,10 @@ const ProductList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(6);
+
   const categories = [
     { id: 'All', name: ' Tất Cả Sản Phẩm' },
     { id: 'Phone', name: ' Điện Thoại (iPhone)' },
@@ -36,22 +40,28 @@ const ProductList = () => {
     setLoading(true);
     setError('');
     try {
-      const data = await productsApi.getAll();
+      const response = await productsApi.getAll(currentPage, pageSize, selectedCategory, searchTerm);
       let cleanData = [];
+      let calculatedTotalPages = 1;
+
+      const data = response?.data || response;
 
       if (data) {
         if (Array.isArray(data)) {
           cleanData = data;
         } else if (data.products && Array.isArray(data.products)) {
           cleanData = data.products;
+          calculatedTotalPages = data.totalPages || 1;
         } else if (data.data && Array.isArray(data.data)) {
           cleanData = data.data;
         } else if (data.data && data.data.products && Array.isArray(data.data.products)) {
           cleanData = data.data.products;
+          calculatedTotalPages = data.data.totalPages || 1;
         }
       }
 
       setAllProducts(cleanData); 
+      setTotalPages(calculatedTotalPages);
     } catch (err) {
       console.error("Lỗi tải sản phẩm:", err);
       setError('Không thể kết nối đến dữ liệu sản phẩm từ hệ thống.');
@@ -62,7 +72,17 @@ const ProductList = () => {
 
   useEffect(() => {
     loadInitialProducts();
-  }, []);
+  }, [currentPage, selectedCategory, searchTerm]);
+
+  const handleCategoryChange = (catId) => {
+    setSelectedCategory(catId);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
   const handleDeleteProduct = async (productId) => {
     const isConfirm = window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm này khỏi hệ thống không?');
@@ -70,11 +90,22 @@ const ProductList = () => {
 
     try {
       await productsApi.delete(productId);
-      setAllProducts((prevProducts) => prevProducts.filter(p => p.id !== productId));
       alert('Thành công: Đã xóa sản phẩm khỏi hệ thống.');
+      
+      if (allProducts.length === 1 && currentPage > 1) {
+        setCurrentPage(prev => prev - 1);
+      } else {
+        loadInitialProducts();
+      }
     } catch (err) {
       console.error("Lỗi xóa sản phẩm:", err);
-      alert('❌ Thất bại! Lỗi từ Server Backend:\n' + (err.response?.data?.detail || err.message));
+      let errorDetail = err.message;
+      if (err.response?.data?.detail) {
+        errorDetail = typeof err.response.data.detail === 'object' 
+          ? JSON.stringify(err.response.data.detail) 
+          : err.response.data.detail;
+      }
+      alert('❌ Thất bại! Lỗi từ Server Backend:\n' + errorDetail);
     }
   };
 
@@ -128,7 +159,7 @@ const ProductList = () => {
             type="text" 
             placeholder="Nhập tên điện thoại, laptop cần tìm..." 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             style={{
               width: '100%',
               padding: '14px 16px 14px 44px',
@@ -195,7 +226,7 @@ const ProductList = () => {
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
+                    onClick={() => handleCategoryChange(cat.id)}
                     style={{
                       textAlign: 'left',
                       padding: '12px 16px',
@@ -280,26 +311,91 @@ const ProductList = () => {
           </div>
         </div>
 
-        <div style={{ flex: '3' }}>
+        <div style={{ flex: '3', display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {filteredProducts.length > 0 ? (
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-              gap: '24px' 
-            }}>
-              {filteredProducts.map((product) => {
-                const cartItem = items.find(item => item.id === product.id);
-                return (
-                  <ProductCard 
-                    key={product.id} 
-                    product={product} 
-                    quantity={cartItem ? cartItem.quantity : 0}
-                    onUpdateCart={handleUpdateCart}
-                    onDelete={handleDeleteProduct}
-                  />
-                );
-              })}
-            </div>
+            <>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+                gap: '24px' 
+              }}>
+                {filteredProducts.map((product) => {
+                  const cartItem = items.find(item => item.id === product.id);
+                  return (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      quantity={cartItem ? cartItem.quantity : 0}
+                      onUpdateCart={handleUpdateCart}
+                      onDelete={handleDeleteProduct}
+                    />
+                  );
+                })}
+              </div>
+
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    style={{
+                      padding: '8px 16px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '10px',
+                      backgroundColor: currentPage === 1 ? '#f1f5f9' : '#ffffff',
+                      color: currentPage === 1 ? '#94a3b8' : '#334155',
+                      fontWeight: '600',
+                      fontSize: '13.5px',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Trang trước
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, index) => {
+                    const pageNum = index + 1;
+                    const isActive = currentPage === pageNum;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        style={{
+                          padding: '8px 14px',
+                          border: '1px solid',
+                          borderColor: isActive ? '#2563eb' : '#cbd5e1',
+                          borderRadius: '10px',
+                          backgroundColor: isActive ? '#2563eb' : '#ffffff',
+                          color: isActive ? '#ffffff' : '#334155',
+                          fontWeight: '700',
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                          boxShadow: isActive ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none'
+                        }}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    style={{
+                      padding: '8px 16px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '10px',
+                      backgroundColor: currentPage >= totalPages ? '#f1f5f9' : '#ffffff',
+                      color: currentPage >= totalPages ? '#94a3b8' : '#334155',
+                      fontWeight: '600',
+                      fontSize: '13.5px',
+                      cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Trang sau
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '60px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
               <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0, fontSize: '14.5px' }}>
