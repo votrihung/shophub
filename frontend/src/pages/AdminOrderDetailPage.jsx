@@ -23,15 +23,17 @@ const AdminOrderDetailPage = () => {
       const response = await axios.get(`http://localhost:8000/orders/${id}`, { headers });
       
       const data = response.data;
+      console.log("Order Data Backend Return:", data);
       setOrder(data);
       setSelectedStatus(data.status || 'PLACED');
       setAdminNote(data.admin_note || data.adminNote || '');
 
-      let name = data.customer_name || data.recipient_name || data.receiver_name || data.full_name || data.user?.full_name || data.user?.name || data.user?.username || '';
+      let name = data.customer_name || data.recipient_name || data.receiver_name || data.full_name || data.name || data.user?.full_name || data.user?.name || data.user?.username || data.user?.email || '';
       let phone = data.phone || data.phone_number || data.recipient_phone || data.receiver_phone || data.user?.phone || data.user?.phone_number || '';
-      let address = data.shipping_address || data.address || data.full_address || data.delivery_address || data.user_address || '';
+      let address = data.shipping_address || data.address || data.full_address || data.delivery_address || data.user_address || data.user?.address || '';
 
       const userId = data.user_id || data.userId || data.user?.id;
+
       if ((!name || !phone || !address) && userId) {
         try {
           const userRes = await axios.get(`http://localhost:8000/users/${userId}`, { headers });
@@ -40,6 +42,15 @@ const AdminOrderDetailPage = () => {
           phone = phone || u.phone || u.phone_number || '';
           address = address || u.address || u.shipping_address || '';
         } catch (uErr) {
+          try {
+            const adminUserRes = await axios.get(`http://localhost:8000/admin/users/${userId}`, { headers });
+            const u = adminUserRes.data;
+            name = name || u.full_name || u.name || u.username || u.email || '';
+            phone = phone || u.phone || u.phone_number || '';
+            address = address || u.address || u.shipping_address || '';
+          } catch (adminUErr) {
+            console.error(adminUErr);
+          }
         }
       }
 
@@ -273,15 +284,21 @@ const AdminOrderDetailPage = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             <div>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Khách hàng:</span>
-              <p style={{ margin: '4px 0 0 0', fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>{customerInfo.name || 'Khách lẻ'}</p>
+              <p style={{ margin: '4px 0 0 0', fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>
+                {customerInfo.name || order.user?.email || (order.user_id ? `User #${order.user_id}` : 'Khách lẻ')}
+              </p>
             </div>
             <div>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Số điện thoại:</span>
-              <p style={{ margin: '4px 0 0 0', fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>{customerInfo.phone || '---'}</p>
+              <p style={{ margin: '4px 0 0 0', fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>
+                {customerInfo.phone || 'Chưa cập nhật'}
+              </p>
             </div>
             <div>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Địa chỉ giao hàng:</span>
-              <p style={{ margin: '4px 0 0 0', fontWeight: '600', color: '#0f172a', fontSize: '15px' }}>{customerInfo.address || 'Chưa cung cấp'}</p>
+              <p style={{ margin: '4px 0 0 0', fontWeight: '600', color: '#0f172a', fontSize: '15px' }}>
+                {customerInfo.address || 'Chưa cập nhật'}
+              </p>
             </div>
           </div>
         )}

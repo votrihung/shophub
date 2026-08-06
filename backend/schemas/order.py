@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator
 
 
 class OrderItemCreate(BaseModel):
@@ -15,6 +15,7 @@ class CheckoutRequest(BaseModel):
     customer_name: Optional[str] = None
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
+    payment_method: Optional[str] = "COD"
 
 
 class OrderItemRead(BaseModel):
@@ -39,6 +40,7 @@ class OrderRead(BaseModel):
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
     admin_note: Optional[str] = None
+    payment_url: Optional[str] = None
     items: List[OrderItemRead]
 
     class Config:
@@ -58,7 +60,15 @@ class OrderSummary(BaseModel):
         from_attributes = True
 
 
-ALLOWED_STATUSES = ["PLACED", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELED"]
+ALLOWED_STATUSES = [
+    "PLACED",
+    "PAID",
+    "FAILED",
+    "PROCESSING",
+    "SHIPPED",
+    "COMPLETED",
+    "CANCELED",
+]
 
 
 class OrderStatusUpdate(BaseModel):
@@ -72,7 +82,9 @@ class OrderStatusUpdate(BaseModel):
     @classmethod
     def validate_status(cls, v: str) -> str:
         if v not in ALLOWED_STATUSES:
-            raise ValueError(f"Trạng thái không hợp lệ. Phải thuộc: {ALLOWED_STATUSES}")
+            raise ValueError(
+                f"Trạng thái không hợp lệ. Phải thuộc: {ALLOWED_STATUSES}"
+            )
         return v
 
 

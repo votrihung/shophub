@@ -13,6 +13,10 @@ import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import CartPage from './pages/CartPage';
 
+import OrderPaymentPage from './pages/OrderPaymentPage';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentReturnPage from './pages/PaymentReturnPage';
+
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminOrderDetailPage from './pages/AdminOrderDetailPage';
 import AdminAddProductPage from './pages/AdminAddProductPage';
@@ -99,6 +103,59 @@ const App = () => {
                   </ProtectedRoute>
                 } 
               />
+
+              <Route 
+                path="/orders/:orderId/payment" 
+                element={
+                  <ProtectedRoute>
+                    <OrderPaymentPage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* ROUTE STRIPE REDIRECT */}
+              <Route 
+                path="/order-success" 
+                element={
+                  <ProtectedRoute>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
+                path="/payment/stripe/success" 
+                element={
+                  <ProtectedRoute>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/payment/paypal/success" 
+                element={
+                  <ProtectedRoute>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/payment/vnpay/success" 
+                element={
+                  <ProtectedRoute>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/payment-return" 
+                element={
+                  <ProtectedRoute>
+                    <PaymentReturnPage />
+                  </ProtectedRoute>
+                } 
+              />
+
               <Route 
                 path="/orders/history" 
                 element={

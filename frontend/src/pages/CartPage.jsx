@@ -14,6 +14,7 @@ const CartPage = () => {
     note: ''
   });
 
+  const [paymentMethod, setPaymentMethod] = useState('COD');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -22,7 +23,6 @@ const CartPage = () => {
       if (!token) return;
 
       try {
-        // Đã cập nhật endpoint sang /auth/me
         const response = await axios.get('http://localhost:8000/auth/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -66,6 +66,7 @@ const CartPage = () => {
 
     try {
       const token = localStorage.getItem('shophub_token') || '';
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const payload = {
         items: orderItems,
@@ -75,17 +76,47 @@ const CartPage = () => {
         note: shippingInfo.note,
         recipient_name: shippingInfo.fullName,
         full_name: shippingInfo.fullName,
-        address: shippingInfo.address
+        address: shippingInfo.address,
+        payment_method: paymentMethod
       };
 
-      const response = await axios.post('http://localhost:8000/orders/checkout', payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const response = await axios.post('http://localhost:8000/orders/checkout', payload, { headers });
 
       if (response.status === 200 || response.status === 201) {
-        alert(`🎉 Đặt hàng thành công!\nXin cảm ơn ${shippingInfo.fullName}.\nĐơn hàng đã được lưu trữ thành công!`);
-        clearCart(); 
-        navigate('/products'); 
+        const createdOrder = response.data;
+        const orderId = createdOrder.id || createdOrder.order_id;
+        clearCart();
+
+        const paymentPayload = {
+          order_id: orderId,
+          amount: totalPrice,
+          currency: "vnd"
+        };
+
+        // Chuyển hướng theo Cổng thanh toán
+        if (paymentMethod === 'VNPAY') {
+          if (createdOrder.payment_url) {
+            window.location.href = createdOrder.payment_url;
+          } else {
+            const vnpRes = await axios.post('http://localhost:8000/payments/vnpay/create-url', paymentPayload, { headers });
+            window.location.href = vnpRes.data.payment_url || vnpRes.data.url;
+          }
+        } else if (paymentMethod === 'STRIPE') {
+          const stripeRes = await axios.post('http://localhost:8000/payments/stripe/create-session', paymentPayload, { headers });
+          window.location.href = stripeRes.data.url;
+        } else if (paymentMethod === 'PAYPAL') {
+          const paypalRes = await axios.post('http://localhost:8000/payments/paypal/create-order', paymentPayload, { headers });
+          const redirectUrl = paypalRes.data.approve_url || paypalRes.data.url;
+          
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+          } else {
+            navigate('/order-success');
+          }
+        } else {
+          // Trường hợp COD
+          navigate('/order-success');
+        }
       } else {
         alert('❌ Đặt hàng không thành công. Vui lòng kiểm tra lại!');
       }
@@ -153,6 +184,52 @@ const CartPage = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Ghi chú đơn hàng</label>
                 <textarea name="note" rows="2" value={shippingInfo.note} onChange={handleInputChange} placeholder="Ghi chú thêm nếu có..." style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13.5px', resize: 'none', boxSizing: 'border-box' }}></textarea>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>Phương thức thanh toán *</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="COD"
+                      checked={paymentMethod === 'COD'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    💵 Thanh toán khi nhận hàng (COD)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="VNPAY"
+                      checked={paymentMethod === 'VNPAY'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    💳 Thanh toán qua VNPay
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="STRIPE"
+                      checked={paymentMethod === 'STRIPE'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    💳 Thanh toán qua Stripe (Visa/Mastercard)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="PAYPAL"
+                      checked={paymentMethod === 'PAYPAL'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    💳 Thanh toán qua PayPal
+                  </label>
+                </div>
               </div>
 
               <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '10px', paddingTop: '16px' }}>

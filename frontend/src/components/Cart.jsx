@@ -1,4 +1,4 @@
-// Giao diện trang Giỏ hàng & Thanh toán (Cart.jsx) - Kết nối Database PostgreSQL thật
+// Giao diện trang Giỏ hàng & Thanh toán (Cart.jsx) - Kết nối Database PostgreSQL & VNPay
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productsApi } from '../api/productsApi';
@@ -7,7 +7,7 @@ const Cart = () => {
   const navigate = useNavigate();
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // 💾 Đồng bộ giỏ hàng từ LocalStorage
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem('shophub_cart');
@@ -49,7 +49,7 @@ const Cart = () => {
       const currentQty = prev[productId] || 0;
       const newQty = currentQty + amount;
       if (newQty <= 0) {
-        const { [productId]: _, ...rest } = prev; // Tự động xóa khỏi giỏ nếu số lượng về 0
+        const { [productId]: _, ...rest } = prev;
         return rest;
       }
       return { ...prev, [productId]: newQty };
@@ -70,7 +70,7 @@ const Cart = () => {
     setShippingInfo(prev => ({ ...prev, [name]: value }));
   };
 
-  // CẬP NHẬT KẾT NỐI API THỰC TẾ LƯU VÀO DATABASE
+  // KẾT NỐI API THỰC TẾ LƯU VÀO DATABASE VÀ CHUYỂN HƯỚNG VNPAY
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.address) {
@@ -97,7 +97,8 @@ const Cart = () => {
           'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
-          items: orderItems
+          items: orderItems,
+          shipping_info: shippingInfo
         })
       });
 
@@ -106,13 +107,25 @@ const Cart = () => {
         throw new Error(errorData.detail || 'Không thể gửi đơn hàng lên máy chủ.');
       }
 
-      // 3. Thông báo nổ đơn thành công và lưu vào PostgreSQL
-      alert(`🎉 BẤM ĐỂ TEST CODE MỚI vào Database!\nXin cảm ơn bác ${shippingInfo.fullName}.\nĐơn hàng đã được lưu trữ trên hệ thống PostgreSQL thành công mỹ mãn!`);
-      
-      // Xóa sạch giỏ hàng sau khi mua thành công
+      // 3. Đọc dữ liệu trả về từ FastAPI
+      const data = await response.json();
+
+      // 4. Kiểm tra link VNPay và chuyển hướng trực tiếp
+      if (data && data.payment_url) {
+        setCart({});
+        localStorage.removeItem('shophub_cart');
+        
+        // Chuyển sang cổng VNPay bằng URL nguyên bản
+        window.location.href = data.payment_url;
+        return;
+      }
+
+      // Trường hợp không dùng VNPay (COD)
+      alert(`🎉 Đặt hàng thành công!\nXin cảm ơn bác ${shippingInfo.fullName}.`);
       setCart({});
       localStorage.removeItem('shophub_cart');
       navigate('/products');
+
     } catch (err) {
       console.error("Lỗi đặt hàng:", err);
       alert(`❌ Có lỗi xảy ra khi gửi đơn hàng: ${err.message}`);
@@ -200,7 +213,7 @@ const Cart = () => {
                   <span style={{ fontWeight: 'bold', color: '#1e293b' }}>{totalItems} sản phẩm</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', marginBottom: '20px', color: '#475569' }}>
-                  <span>Tổng tiền toán:</span>
+                  <span>Tổng tiền thanh toán:</span>
                   <span style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>{totalPrice.toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>

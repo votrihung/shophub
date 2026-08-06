@@ -23,7 +23,10 @@ import models.product
 import models.user
 import models.order
 
+# Import các router hiện tại
 from routers import products, auth, orders
+# BỔ SUNG: Import trực tiếp router thanh toán từ routers/payments.py
+from routers.payments import router as payments_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -35,6 +38,8 @@ app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
 app.include_router(products.router)  
 app.include_router(auth.router)      
 app.include_router(orders.router)
+# BỔ SUNG: Đăng ký router thanh toán
+app.include_router(payments_router)
 
 @app.get("/")
 def read_root():
