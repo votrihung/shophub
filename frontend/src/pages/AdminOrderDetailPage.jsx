@@ -20,7 +20,7 @@ const AdminOrderDetailPage = () => {
     try {
       const token = localStorage.getItem('shophub_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(`http://localhost:8000/orders/${id}`, { headers });
+      const response = await axios.get(`https://shophub-production-c481.up.railway.app/orders/${id}`, { headers });
       
       const data = response.data;
       console.log("Order Data Backend Return:", data);
@@ -36,14 +36,14 @@ const AdminOrderDetailPage = () => {
 
       if ((!name || !phone || !address) && userId) {
         try {
-          const userRes = await axios.get(`http://localhost:8000/users/${userId}`, { headers });
+          const userRes = await axios.get(`https://shophub-production-c481.up.railway.app/users/${userId}`, { headers });
           const u = userRes.data;
           name = name || u.full_name || u.name || u.username || u.email || '';
           phone = phone || u.phone || u.phone_number || '';
           address = address || u.address || u.shipping_address || '';
         } catch (uErr) {
           try {
-            const adminUserRes = await axios.get(`http://localhost:8000/admin/users/${userId}`, { headers });
+            const adminUserRes = await axios.get(`https://shophub-production-c481.up.railway.app/admin/users/${userId}`, { headers });
             const u = adminUserRes.data;
             name = name || u.full_name || u.name || u.username || u.email || '';
             phone = phone || u.phone || u.phone_number || '';
@@ -73,7 +73,7 @@ const AdminOrderDetailPage = () => {
     try {
       const token = localStorage.getItem('shophub_token');
       const response = await axios.patch(
-        `http://localhost:8000/orders/${id}/info`,
+        `https://shophub-production-c481.up.railway.app/orders/${id}/info`,
         {
           customer_name: customerInfo.name,
           phone: customerInfo.phone,
@@ -97,7 +97,7 @@ const AdminOrderDetailPage = () => {
       try {
         const token = localStorage.getItem('shophub_token');
         const fallbackRes = await axios.put(
-          `http://localhost:8000/orders/${id}/status`,
+          `https://shophub-production-c481.up.railway.app/orders/${id}/status`,
           {
             status: selectedStatus,
             admin_note: adminNote,
@@ -133,7 +133,7 @@ const AdminOrderDetailPage = () => {
       };
 
       const response = await axios.put(
-        `http://localhost:8000/orders/${id}/status`, 
+        `https://shophub-production-c481.up.railway.app/orders/${id}/status`, 
         payload,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
@@ -146,7 +146,7 @@ const AdminOrderDetailPage = () => {
       try {
         const token = localStorage.getItem('shophub_token');
         const patchRes = await axios.patch(
-          `http://localhost:8000/orders/${id}`,
+          `https://shophub-production-c481.up.railway.app/orders/${id}`,
           { 
             status: selectedStatus, 
             admin_note: adminNote,
@@ -176,7 +176,7 @@ const AdminOrderDetailPage = () => {
     try {
       const token = localStorage.getItem('shophub_token');
       const response = await axios.patch(
-        `http://localhost:8000/orders/${id}/items/quantity`,
+        `https://shophub-production-c481.up.railway.app/orders/${id}/items/quantity`,
         { item_id: itemId, quantity: newQty },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );

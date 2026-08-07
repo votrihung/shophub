@@ -23,7 +23,7 @@ const CartPage = () => {
       if (!token) return;
 
       try {
-        const response = await axios.get('http://localhost:8000/auth/me', {
+        const response = await axios.get('https://shophub-production-c481.up.railway.app/auth/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
         const user = response.data;
@@ -80,7 +80,7 @@ const CartPage = () => {
         payment_method: paymentMethod
       };
 
-      const response = await axios.post('http://localhost:8000/orders/checkout', payload, { headers });
+      const response = await axios.post('https://shophub-production-c481.up.railway.app/orders/checkout', payload, { headers });
 
       if (response.status === 200 || response.status === 201) {
         const createdOrder = response.data;
@@ -98,14 +98,14 @@ const CartPage = () => {
           if (createdOrder.payment_url) {
             window.location.href = createdOrder.payment_url;
           } else {
-            const vnpRes = await axios.post('http://localhost:8000/payments/vnpay/create-url', paymentPayload, { headers });
+            const vnpRes = await axios.post('https://shophub-production-c481.up.railway.app/payments/vnpay/create-url', paymentPayload, { headers });
             window.location.href = vnpRes.data.payment_url || vnpRes.data.url;
           }
         } else if (paymentMethod === 'STRIPE') {
-          const stripeRes = await axios.post('http://localhost:8000/payments/stripe/create-session', paymentPayload, { headers });
+          const stripeRes = await axios.post('https://shophub-production-c481.up.railway.app/payments/stripe/create-session', paymentPayload, { headers });
           window.location.href = stripeRes.data.url;
         } else if (paymentMethod === 'PAYPAL') {
-          const paypalRes = await axios.post('http://localhost:8000/payments/paypal/create-order', paymentPayload, { headers });
+          const paypalRes = await axios.post('https://shophub-production-c481.up.railway.app/payments/paypal/create-order', paymentPayload, { headers });
           const redirectUrl = paypalRes.data.approve_url || paypalRes.data.url;
           
           if (redirectUrl) {

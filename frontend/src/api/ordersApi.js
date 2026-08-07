@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/orders';
+const API_URL = 'https://shophub-production-c481.up.railway.app/orders';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');

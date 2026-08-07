@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8000', 
+  baseURL: 'https://shophub-production-c481.up.railway.app', 
   headers: {
     'Content-Type': 'application/json',
   },

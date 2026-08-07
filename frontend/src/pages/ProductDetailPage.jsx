@@ -52,7 +52,7 @@ const ProductDetailPage = () => {
 
     try {
       // 1. Lấy lịch sử đơn hàng
-      const res = await axios.get('http://localhost:8000/orders/history', {
+      const res = await axios.get('https://shophub-production-c481.up.railway.app/orders/history', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const orders = res.data || [];

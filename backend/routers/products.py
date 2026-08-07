@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query, Form
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query, Form, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, text
 from typing import Optional, List
@@ -12,7 +12,6 @@ from schemas.product import ProductRead, ProductUpdate
 router = APIRouter(prefix="/products", tags=["products"])
 
 IMAGE_DIR = "data_images"
-
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 @router.get("")
@@ -67,6 +66,7 @@ def get_product_detail(product_id: int, db: Session = Depends(get_db)):
 
 @router.post("", status_code=201)
 async def create_product(
+    request: Request,
     name: str = Form(...),
     description: Optional[str] = Form(None),
     price: float = Form(...),
@@ -87,7 +87,9 @@ async def create_product(
     with open(file_path, "wb") as f:
         f.write(contents)
 
-    image_url = f"http://localhost:8000/images/{unique_filename}"
+    # Tự động lấy base URL của Server (Chạy Railway ra domain Railway, chạy Local ra localhost)
+    base_url = str(request.base_url).rstrip("/")
+    image_url = f"{base_url}/images/{unique_filename}"
     
     new_product = ProductDB(
         name=name, description=description, price=price,

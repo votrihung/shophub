@@ -18,7 +18,7 @@ export default function OrderPaymentPage() {
       let response;
       if (provider === 'vnpay') {
         response = await axios.post(
-          'http://localhost:8000/payments/vnpay/create-url',
+          'https://shophub-production-c481.up.railway.app/payments/vnpay/create-url',
           { order_id: parseInt(orderId) },
           { headers }
         );
@@ -26,7 +26,7 @@ export default function OrderPaymentPage() {
 
       } else if (provider === 'stripe') {
         response = await axios.post(
-          'http://localhost:8000/payments/stripe/create-session',
+          'https://shophub-production-c481.up.railway.app/payments/stripe/create-session',
           { order_id: parseInt(orderId) },
           { headers }
         );
@@ -34,7 +34,7 @@ export default function OrderPaymentPage() {
 
       } else if (provider === 'paypal') {
         response = await axios.post(
-          'http://localhost:8000/payments/paypal/create-order',
+          'https://shophub-production-c481.up.railway.app/payments/paypal/create-order',
           { order_id: parseInt(orderId) },
           { headers }
         );

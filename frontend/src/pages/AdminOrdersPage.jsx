@@ -20,7 +20,7 @@ const AdminOrdersPage = () => {
     setError('');
     try {
       const token = localStorage.getItem('shophub_token');
-      const response = await axios.get('http://localhost:8000/orders/admin/all', {
+      const response = await axios.get('https://shophub-production-c481.up.railway.app/orders/admin/all', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       console.log("🔥 DỮ LIỆU ĐƠN HÀNG TỪ BACKEND:", response.data);
@@ -78,7 +78,7 @@ const AdminOrdersPage = () => {
     }
 
     const cleanPath = rawImg.startsWith('/') ? rawImg : `/${rawImg}`;
-    return `http://localhost:8000${cleanPath}`;
+    return `https://shophub-production-c481.up.railway.app${cleanPath}`;
   };
 
   const filteredOrders = orders.filter((order) => {

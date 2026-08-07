@@ -24,7 +24,7 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:8000/auth/login', {
+      const response = await axios.post('https://shophub-production-c481.up.railway.app/auth/login', {
         username: formData.email,
         password: formData.password
       });

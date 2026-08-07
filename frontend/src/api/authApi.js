@@ -3,7 +3,7 @@ import axios from 'axios';
 
 export const authApi = {
   register: async (payload) => {
-    const response = await axios.post('http://localhost:8000/auth/register', payload, {
+    const response = await axios.post('https://shophub-production-c481.up.railway.app/auth/register', payload, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -12,7 +12,7 @@ export const authApi = {
   },
 
   login: async (payload) => {
-    const response = await axios.post('http://localhost:8000/auth/login', payload, {
+    const response = await axios.post('https://shophub-production-c481.up.railway.app/auth/login', payload, {
       headers: {
         'Content-Type': 'application/json'
       }

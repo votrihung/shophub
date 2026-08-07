@@ -12,7 +12,7 @@ const OrderHistoryPage = () => {
     const fetchOrderHistory = async () => {
       try {
         const token = localStorage.getItem('shophub_token');
-        const response = await axios.get('http://localhost:8000/orders/history', {
+        const response = await axios.get('https://shophub-production-c481.up.railway.app/orders/history', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         setOrders(response.data);

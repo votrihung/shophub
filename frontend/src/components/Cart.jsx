@@ -81,7 +81,7 @@ const Cart = () => {
     try {
       const token = localStorage.getItem('shophub_token') || '';
 
-      const response = await fetch('http://localhost:8000/orders/checkout', {
+      const response = await fetch('https://shophub-production-c481.up.railway.app/orders/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

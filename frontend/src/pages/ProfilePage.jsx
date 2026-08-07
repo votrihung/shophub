@@ -32,7 +32,7 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:8000/auth/me')
+    axios.get('https://shophub-production-c481.up.railway.app/auth/me')
       .then(res => {
         setProfile({
           email: res.data.email || '',
@@ -51,7 +51,7 @@ const ProfilePage = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put('http://localhost:8000/auth/profile', {
+      const res = await axios.put('https://shophub-production-c481.up.railway.app/auth/profile', {
         full_name: profile.full_name,
         phone: profile.phone,
         address: profile.address
@@ -69,7 +69,7 @@ const ProfilePage = () => {
       return;
     }
     try {
-      const res = await axios.put('http://localhost:8000/auth/change-password', {
+      const res = await axios.put('https://shophub-production-c481.up.railway.app/auth/change-password', {
         old_password: passwords.old_password,
         new_password: passwords.new_password
       });

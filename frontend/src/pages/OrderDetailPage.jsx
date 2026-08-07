@@ -19,7 +19,7 @@ const OrderDetailPage = () => {
   const fetchOrderDetail = async () => {
     try {
       const token = localStorage.getItem('shophub_token');
-      const response = await axios.get(`http://localhost:8000/orders/${id}`, {
+      const response = await axios.get(`https://shophub-production-c481.up.railway.app/orders/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       setOrder(response.data);
@@ -41,7 +41,7 @@ const OrderDetailPage = () => {
     try {
       const token = localStorage.getItem('shophub_token');
       const response = await axios.put(
-        `http://localhost:8000/orders/${id}/status`,
+        `https://shophub-production-c481.up.railway.app/orders/${id}/status`,
         { status: newStatus },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
@@ -62,7 +62,7 @@ const OrderDetailPage = () => {
     try {
       const token = localStorage.getItem('shophub_token');
       const response = await axios.post(
-        `http://localhost:8000/orders/${id}/cancel`,
+        `https://shophub-production-c481.up.railway.app/orders/${id}/cancel`,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
@@ -86,7 +86,7 @@ const OrderDetailPage = () => {
     try {
       const token = localStorage.getItem('shophub_token');
       const response = await axios.patch(
-        `http://localhost:8000/orders/${id}/items/quantity`,
+        `https://shophub-production-c481.up.railway.app/orders/${id}/items/quantity`,
         { item_id: itemId, quantity: newQty },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );

@@ -18,7 +18,7 @@ const MyOrdersPage = () => {
 
       try {
         // Gọi trực tiếp endpoint /orders/history đã có sẵn trong orders.py
-        const response = await axios.get('http://localhost:8000/orders/history', {
+        const response = await axios.get('https://shophub-production-c481.up.railway.app/orders/history', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setOrders(response.data || []);

@@ -3,15 +3,15 @@ import axiosClient from './axiosClient';
 
 export const productsApi = {
   getAll: (page = 1, size = 6) => {
-    return axiosClient.get(`http://localhost:8000/products?page=${page}&size=${size}`);
+    return axiosClient.get(`https://shophub-production-c481.up.railway.app/products?page=${page}&size=${size}`);
   },
 
   getById: (id) => {
-    return axiosClient.get(`http://localhost:8000/products/${id}`);
+    return axiosClient.get(`https://shophub-production-c481.up.railway.app/products/${id}`);
   },
 
   searchProduct: (query) => {
-    return axiosClient.get(`http://localhost:8000/products/search?query=${encodeURIComponent(query)}`);
+    return axiosClient.get(`https://shophub-production-c481.up.railway.app/products/search?query=${encodeURIComponent(query)}`);
   },
 
   create: async (formData) => {
@@ -19,7 +19,7 @@ export const productsApi = {
     const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
     const fakeToken = `shophub-session-${parsedLocal?.id || 1}`;
 
-    const response = await axios.post('http://localhost:8000/products', formData, {
+    const response = await axios.post('https://shophub-production-c481.up.railway.app/products', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${fakeToken}`
@@ -33,7 +33,7 @@ export const productsApi = {
     const parsedLocal = rawLocal ? JSON.parse(rawLocal) : {};
     const fakeToken = `shophub-session-${parsedLocal?.id || 1}`;
 
-    const response = await axios.delete(`http://localhost:8000/products/${String(id)}`, {
+    const response = await axios.delete(`https://shophub-production-c481.up.railway.app/products/${String(id)}`, {
       headers: {
         'Authorization': `Bearer ${fakeToken}`
       }

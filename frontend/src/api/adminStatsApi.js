@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://shophub-production-c481.up.railway.app';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('shophub_token');
