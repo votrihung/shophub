@@ -2,7 +2,7 @@ import axios from 'axios';
 import { handleApiError } from './errorHandler';
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://shophub-production-c481.up.railway.app',
+  baseURL: 'https://shophub-production-c481.up.railway.app',
   headers: {
     'Content-Type': 'application/json',
   },

@@ -8,13 +8,11 @@ const Cart = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 💾 Đồng bộ giỏ hàng từ LocalStorage
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem('shophub_cart');
     return savedCart ? JSON.parse(savedCart) : {};
   });
 
-  // State lưu trữ thông tin nhập Form của khách hàng
   const [shippingInfo, setShippingInfo] = useState({
     fullName: '',
     phone: '',
@@ -26,7 +24,6 @@ const Cart = () => {
     localStorage.setItem('shophub_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Lấy data sản phẩm gốc từ backend về để đối chiếu thông tin (Tên, Giá, Hình ảnh)
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -43,7 +40,6 @@ const Cart = () => {
     fetchProducts();
   }, []);
 
-  // Thay đổi số lượng sản phẩm (+1 hoặc -1)
   const updateQuantity = (productId, amount) => {
     setCart(prev => {
       const currentQty = prev[productId] || 0;
@@ -56,7 +52,6 @@ const Cart = () => {
     });
   };
 
-  // Nút xóa nhanh sản phẩm ra khỏi giỏ hàng
   const removeProduct = (productId) => {
     setCart(prev => {
       const { [productId]: _, ...rest } = prev;
@@ -64,13 +59,11 @@ const Cart = () => {
     });
   };
 
-  // Cập nhật giá trị khi người dùng gõ vào các ô Input
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setShippingInfo(prev => ({ ...prev, [name]: value }));
   };
 
-  // KẾT NỐI API THỰC TẾ LƯU VÀO DATABASE VÀ CHUYỂN HƯỚNG VNPAY
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.address) {
@@ -78,7 +71,6 @@ const Cart = () => {
       return;
     }
 
-    // 1. Chuẩn bị danh sách sản phẩm mua
     const orderItems = cartItems.map(item => ({
       product_id: item.id,
       name: item.name,
@@ -89,7 +81,6 @@ const Cart = () => {
     try {
       const token = localStorage.getItem('shophub_token') || '';
 
-      // 2. Gửi request POST tới FastAPI Backend
       const response = await fetch('http://localhost:8000/orders/checkout', {
         method: 'POST',
         headers: {
@@ -107,20 +98,16 @@ const Cart = () => {
         throw new Error(errorData.detail || 'Không thể gửi đơn hàng lên máy chủ.');
       }
 
-      // 3. Đọc dữ liệu trả về từ FastAPI
       const data = await response.json();
 
-      // 4. Kiểm tra link VNPay và chuyển hướng trực tiếp
       if (data && data.payment_url) {
         setCart({});
         localStorage.removeItem('shophub_cart');
         
-        // Chuyển sang cổng VNPay bằng URL nguyên bản
         window.location.href = data.payment_url;
         return;
       }
 
-      // Trường hợp không dùng VNPay (COD)
       alert(`🎉 Đặt hàng thành công!\nXin cảm ơn bác ${shippingInfo.fullName}.`);
       setCart({});
       localStorage.removeItem('shophub_cart');
@@ -132,7 +119,6 @@ const Cart = () => {
     }
   };
 
-  // Lọc ra các sản phẩm thực sự đang có trong giỏ hàng để hiển thị
   const cartItems = allProducts.filter(p => cart[p.id] > 0);
   const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   const totalPrice = cartItems.reduce((sum, p) => sum + (Number(p.price) * cart[p.id]), 0);
@@ -154,7 +140,6 @@ const Cart = () => {
       ) : (
         <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
           
-          {/* CỘT TRÁI: DANH SÁCH SẢN PHẨM */}
           <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {cartItems.map(item => (
               <div key={item.id} style={{ display: 'flex', gap: '16px', backgroundColor: '#fff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
@@ -182,7 +167,6 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* CỘT PHẢI: FORM GIAO HÀNG */}
           <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '700', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', color: '#0f172a' }}>📋 Thông tin nhận hàng</h3>
             
