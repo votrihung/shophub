@@ -12,6 +12,7 @@ import Home from './pages/Home';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import CartPage from './pages/CartPage';
+import ProfilePage from './pages/ProfilePage'; 
 
 import OrderPaymentPage from './pages/OrderPaymentPage';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -20,6 +21,7 @@ import PaymentReturnPage from './pages/PaymentReturnPage';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminOrderDetailPage from './pages/AdminOrderDetailPage';
 import AdminAddProductPage from './pages/AdminAddProductPage';
+import AdminDashboardPage from './pages/AdminDashboardPage'; 
 
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailPage from './pages/OrderDetailPage';
@@ -80,6 +82,15 @@ const App = () => {
               <Route path="/register" element={<RegisterPage />} />
 
               <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
                 path="/products" 
                 element={
                   <ProtectedRoute>
@@ -113,7 +124,6 @@ const App = () => {
                 } 
               />
 
-              {/* ROUTE STRIPE REDIRECT */}
               <Route 
                 path="/order-success" 
                 element={
@@ -174,6 +184,7 @@ const App = () => {
               />
               
               <Route element={<AdminRoute />}>
+                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                 <Route path="/admin/products/new" element={<AdminAddProductPage />} />
                 <Route path="/admin/orders" element={<AdminOrdersPage />} />
                 <Route path="/admin/orders/:id" element={<AdminOrderDetailPage />} />

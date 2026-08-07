@@ -43,11 +43,26 @@ export const updateOrderStatus = async (orderId, payload) => {
   return response.data;
 };
 
+
+export const createProductReview = async (reviewData) => {
+  const config = getHeaders();
+  const response = await axios.post(`${API_URL}/review`, reviewData, config);
+  return response.data;
+};
+
+export const getProductReviews = async (productId) => {
+  const config = getHeaders();
+  const response = await axios.get(`${API_URL}/product/${productId}/reviews`, config);
+  return response.data;
+};
+
 export const ordersApi = {
   getAll: getAllOrders,
   updateStatus: updateOrderStatus,
   checkout,
   getOrderHistory,
+  createProductReview,
+  getProductReviews,
 };
 
 export default ordersApi;

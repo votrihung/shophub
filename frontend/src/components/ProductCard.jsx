@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { getProductReviews } from '../api/ordersApi'; // Import hàm lấy đánh giá chính xác của dự án
 
 const ProductCard = ({ product, quantity, onDelete }) => {
   const { addToCart, updateQuantity, removeFromCart } = useCart();
@@ -8,11 +9,42 @@ const ProductCard = ({ product, quantity, onDelete }) => {
   const [activeBtn, setActiveBtn] = useState(null);
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
 
+  // State lưu số sao và lượt đánh giá thật
+  const [realRating, setRealRating] = useState({ rating: 0, count: 0 });
+
   const rawUser = localStorage.getItem('shophub_user');
   const userObj = rawUser ? JSON.parse(rawUser) : null;
   const isAdmin = userObj?.role === 'ADMIN';
 
-  // Nhấn nút Trừ (-)
+  // LẤY ĐÁNH GIÁ THẬT BẰNG HÀM getProductReviews DÀNH RIÊNG CHO SẢN PHẨM NÀY
+  useEffect(() => {
+    let isMounted = true;
+
+    if (product?.id) {
+      getProductReviews(product.id)
+        .then((revs) => {
+          if (!isMounted) return;
+          const reviewList = revs || [];
+          if (reviewList.length > 0) {
+            const total = reviewList.reduce((sum, r) => sum + Number(r.rating || 0), 0);
+            setRealRating({
+              rating: total / reviewList.length,
+              count: reviewList.length,
+            });
+          } else {
+            setRealRating({ rating: 0, count: 0 });
+          }
+        })
+        .catch(() => {
+          if (isMounted) setRealRating({ rating: 0, count: 0 });
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [product?.id]);
+
   const handleDecrease = () => {
     if (quantity <= 1) {
       removeFromCart(product.id);
@@ -21,7 +53,6 @@ const ProductCard = ({ product, quantity, onDelete }) => {
     }
   };
 
-  // Nhấn nút Cộng (+)
   const handleIncrease = () => {
     addToCart(product, 1);
   };
@@ -52,7 +83,6 @@ const ProductCard = ({ product, quantity, onDelete }) => {
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
-      
       <Link to={`/products/${product.id}`} style={{ display: 'block', width: '100%', cursor: 'pointer', textDecoration: 'none' }}>
         <div style={{
           width: '100%',
@@ -98,7 +128,7 @@ const ProductCard = ({ product, quantity, onDelete }) => {
         <p style={{ 
           fontSize: '12.5px', 
           color: '#64748b', 
-          margin: '0 0 10px 0',
+          margin: '0 0 6px 0',
           display: '-webkit-box',
           WebkitLineClamp: '2',
           WebkitBoxOrient: 'vertical',
@@ -108,14 +138,43 @@ const ProductCard = ({ product, quantity, onDelete }) => {
         }}>
           {product.description || 'Hàng chính hãng VN/A'}
         </p>
-        
+
+        {/* Khối Đánh Giá Thật */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '4px', 
+          margin: '4px 0 8px 0',
+          fontSize: '13px',
+          minHeight: '20px'
+        }}>
+          {realRating.rating > 0 ? (
+            <>
+              <span style={{ color: '#f59e0b' }}>⭐</span>
+              <span style={{ fontWeight: '700', color: '#1e293b' }}>
+                {realRating.rating.toFixed(1)}
+              </span>
+              <span style={{ color: '#64748b' }}>/5.0</span>
+              {realRating.count > 0 && (
+                <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '2px' }}>
+                  ({realRating.count})
+                </span>
+              )}
+            </>
+          ) : (
+            <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '12px' }}>
+              Chưa có đánh giá
+            </span>
+          )}
+        </div>
+
         <p style={{ fontSize: '17px', fontWeight: '800', color: '#ef4444', margin: '0' }}>
           {product.price?.toLocaleString('vi-VN')}đ
         </p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: 'auto', width: '100%' }}>
-        
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <button 
             onClick={handleDecrease}

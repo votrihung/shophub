@@ -1,15 +1,22 @@
 import os
 import sys
-sys.path.append(os.path.abspath("."))
-
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# 1. Biến app bắt buộc phải có ở đây
+sys.path.append(os.path.abspath("."))
+
+from database import engine, Base
+import models.product
+import models.user
+import models.order
+
+from routers import products, auth, orders, admin_stats
+from routers.payments import router as payments_router
+
 app = FastAPI(title="ShopHub Product API với PostgreSQL", version="2.0.0")
 
-# 2. Cấu hình CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  
@@ -18,33 +25,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from database import engine, Base
-import models.product
-import models.user
-import models.order
-
-# Import các router hiện tại
-from routers import products, auth, orders
-# BỔ SUNG: Import trực tiếp router thanh toán từ routers/payments.py
-from routers.payments import router as payments_router
-
 Base.metadata.create_all(bind=engine)
 
 IMAGE_DIR = "data_images"
 os.makedirs(IMAGE_DIR, exist_ok=True)
-
 app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
 
 app.include_router(products.router)  
 app.include_router(auth.router)      
 app.include_router(orders.router)
-# BỔ SUNG: Đăng ký router thanh toán
 app.include_router(payments_router)
+app.include_router(admin_stats.router)
 
 @app.get("/")
 def read_root():
     return {"status": "success", "message": "Backend ShopHub chạy PostgreSQL ngon lành!"}
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

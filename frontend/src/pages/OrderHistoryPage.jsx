@@ -45,6 +45,8 @@ const OrderHistoryPage = () => {
         return { style: { ...baseStyle, backgroundColor: '#f3e8ff', color: '#6b21a8' }, text: 'Đang giao hàng' };
       case 'COMPLETED':
         return { style: { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' }, text: 'Hoàn thành' };
+      case 'PAID':
+        return { style: { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' }, text: 'Đã thanh toán' };
       case 'CANCELED':
         return { style: { ...baseStyle, backgroundColor: '#fee2e2', color: '#991b1b' }, text: 'Đã hủy' };
       default:
@@ -95,6 +97,8 @@ const OrderHistoryPage = () => {
               {orders.map((order) => {
                 const badge = getStatusBadgeData(order.status);
                 const totalAmount = order.total_amount ?? order.total_price ?? 0;
+                const canReview = order.status === 'COMPLETED' || order.status === 'PAID';
+
                 return (
                   <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <td 
@@ -107,12 +111,32 @@ const OrderHistoryPage = () => {
                       {new Date(order.created_at).toLocaleString('vi-VN')}
                     </td>
                     <td style={{ padding: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {order.items && order.items.length > 0 ? (
                           order.items.map((item) => (
-                            <div key={item.id} style={{ fontSize: '13px', color: '#1e293b' }}>
-                              • <span style={{ fontWeight: '600' }}>{item.product_name || item.name}</span> 
-                              <span style={{ color: '#64748b', marginLeft: '6px' }}>(x{item.quantity})</span>
+                            <div key={item.id} style={{ fontSize: '13px', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                              <div>
+                                • <span style={{ fontWeight: '600' }}>{item.product_name || item.name}</span> 
+                                <span style={{ color: '#64748b', marginLeft: '6px' }}>(x{item.quantity})</span>
+                              </div>
+                              {canReview && (
+                                <button
+                                  onClick={() => navigate(`/products/${item.product_id}`)}
+                                  style={{
+                                    padding: '4px 8px',
+                                    backgroundColor: '#f59e0b',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  ⭐ Đánh giá
+                                </button>
+                              )}
                             </div>
                           ))
                         ) : (

@@ -10,8 +10,10 @@ const Header = ({ title = "ShopHub" }) => {
   const { totalQuantity } = useCart();
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Nhận diện vai trò Admin từ AuthContext
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user && (
+    user.role?.toUpperCase() === 'ADMIN' || 
+    user.username?.toLowerCase().includes('admin')
+  );
 
   useEffect(() => {
     if (totalQuantity > 0) {
@@ -32,6 +34,7 @@ const Header = ({ title = "ShopHub" }) => {
   };
 
   const isActive = (path) => location.pathname === path;
+  const isAdminActive = isActive('/admin/dashboard') || isActive('/admin/orders');
 
   return (
     <header style={{ 
@@ -61,6 +64,7 @@ const Header = ({ title = "ShopHub" }) => {
           text-decoration: none;
           padding: 6px 2px;
           font-size: 15px;
+          white-space: nowrap;
           transition: color 0.3s ease;
         }
         .nav-link:hover {
@@ -85,6 +89,47 @@ const Header = ({ title = "ShopHub" }) => {
         .nav-active::after {
           width: 100% !important;
         }
+
+        /* Dropdown Menu Admin Style */
+        .admin-dropdown {
+          position: relative;
+          display: inline-block;
+        }
+        .admin-dropdown-menu {
+          display: none;
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: #ffffff;
+          min-width: 180px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+          border-radius: 12px;
+          padding: 8px;
+          margin-top: 8px;
+          border: 1px solid #f1f5f9;
+          z-index: 1010;
+        }
+        .admin-dropdown:hover .admin-dropdown-menu {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .dropdown-item {
+          color: #475569;
+          padding: 10px 14px;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 600;
+          border-radius: 8px;
+          white-space: nowrap;
+          transition: all 0.2s ease;
+        }
+        .dropdown-item:hover {
+          background-color: #eff6ff;
+          color: #2563eb;
+        }
+
         .logout-btn {
           padding: 8px 16px;
           background-color: #fee2e2;
@@ -95,6 +140,7 @@ const Header = ({ title = "ShopHub" }) => {
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
+          white-space: nowrap;
         }
         .logout-btn:hover {
           background-color: #ef4444;
@@ -111,6 +157,7 @@ const Header = ({ title = "ShopHub" }) => {
           font-size: 14px;
           transition: all 0.2s ease;
           display: inline-block;
+          white-space: nowrap;
         }
         .login-btn:hover {
           background-color: #1d4ed8;
@@ -124,7 +171,7 @@ const Header = ({ title = "ShopHub" }) => {
           {title}
         </Link>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <Link to="/" className={`nav-link ${isActive('/') ? 'nav-active' : ''}`}>
             Trang Chủ
           </Link>
@@ -135,18 +182,32 @@ const Header = ({ title = "ShopHub" }) => {
             Giới Thiệu
           </Link>
           
-          {/* Lịch sử đơn hàng dành cho mọi người dùng đã đăng nhập */}
+          {/* Bổ sung nút Tài Khoản & Lịch Sử khi đã đăng nhập */}
           {user && (
-            <Link to="/orders/history" className={`nav-link ${isActive('/orders/history') ? 'nav-active' : ''}`}>
-              Lịch Sử 
-            </Link>
+            <>
+              <Link to="/profile" className={`nav-link ${isActive('/profile') ? 'nav-active' : ''}`}>
+                Tài Khoản
+              </Link>
+              <Link to="/orders/history" className={`nav-link ${isActive('/orders/history') ? 'nav-active' : ''}`}>
+                Lịch Sử 
+              </Link>
+            </>
           )}
 
-          {/* Nút Quản Lý Đơn Hàng chỉ hiển thị cho tài khoản ADMIN */}
-          {user && isAdmin && (
-            <Link to="/admin/orders" className={`nav-link ${isActive('/admin/orders') ? 'nav-active' : ''}`}>
-              Quản lý Đơn ⚙️
-            </Link>
+          {isAdmin && (
+            <div className="admin-dropdown">
+              <span className={`nav-link ${isAdminActive ? 'nav-active' : ''}`} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                Quản Trị  ▾
+              </span>
+              <div className="admin-dropdown-menu">
+                <Link to="/admin/dashboard" className={`dropdown-item ${isActive('/admin/dashboard') ? 'nav-active' : ''}`}>
+                   Thống kê Dashboard
+                </Link>
+                <Link to="/admin/orders" className={`dropdown-item ${isActive('/admin/orders') ? 'nav-active' : ''}`}>
+                  Quản lý Đơn hàng
+                </Link>
+              </div>
+            </div>
           )}
 
           <Link 
@@ -182,9 +243,10 @@ const Header = ({ title = "ShopHub" }) => {
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '2px solid #e2e8f0', paddingLeft: '20px' }}>
-              <span style={{ fontSize: '14.5px', fontWeight: '650', color: '#334155' }}>
+              {/* Bấm thẳng vào tên chào mừng cũng sẽ chuyển tới /profile */}
+              <Link to="/profile" style={{ textDecoration: 'none', fontSize: '14.5px', fontWeight: '650', color: '#334155', whiteSpace: 'nowrap' }}>
                 👋 Chào bạn, <span style={{ color: '#2563eb', fontWeight: '700' }}>{user.name || user.email || 'Thành Viên'}</span>
-              </span>
+              </Link>
               <button onClick={handleLogoutClick} className="logout-btn">
                 Đăng xuất
               </button>

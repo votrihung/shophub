@@ -1,6 +1,8 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
+from pydantic import BaseModel, Field
 
 from database import get_db
 from models.order import OrderDB, OrderItemDB
@@ -10,6 +12,14 @@ from schemas.order import CheckoutRequest, OrderRead, OrderSummary
 from vnpay import create_vnpay_url
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
+
+
+# === SCHEMAS CHO ĐÁNH GIÁ SẢN PHẨM ===
+class ReviewCreate(BaseModel):
+    product_id: int
+    rating: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 @router.get("/admin/all", response_model=List[OrderRead])
@@ -74,6 +84,7 @@ def get_order_history(
             items_data.append(
                 {
                     "id": item.id,
+                    "product_id": item.product_id,
                     "product_name": item.product_name,
                     "quantity": item.quantity,
                     "product_price": float(item.product_price),
@@ -549,4 +560,127 @@ def checkout(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Có lỗi xảy ra khi xử lý đặt hàng: {str(e)}",
+        )
+
+
+@router.post("/review")
+def create_product_review(
+    payload: ReviewCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Cho phép người dùng đánh giá sản phẩm theo số lần mua thành công.
+    Số lần được đánh giá = Tổng số lần xuất hiện của sản phẩm trong các đơn hàng thành công.
+    """
+    try:
+        # 1. Đếm số LẦN sản phẩm này xuất hiện trong các đơn hàng thành công (COMPLETED hoặc PAID)
+        purchase_count_result = db.execute(
+            text("""
+                SELECT COUNT(*) 
+                FROM orders o
+                JOIN order_items oi ON o.id = oi.order_id
+                WHERE o.user_id = :user_id 
+                  AND oi.product_id = :product_id 
+                  AND LOWER(o.status) IN ('completed', 'paid')
+            """),
+            {
+                "user_id": current_user.id,
+                "product_id": payload.product_id
+            }
+        ).scalar() or 0
+
+        if purchase_count_result == 0:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn cần mua và nhận hàng thành công mới được đánh giá sản phẩm này!",
+            )
+
+        # 2. Đếm số LẦN người dùng này đã gửi đánh giá cho sản phẩm
+        user_review_count = db.execute(
+            text("""
+                SELECT COUNT(*) 
+                FROM reviews 
+                WHERE user_id = :user_id 
+                  AND product_id = :product_id
+            """),
+            {
+                "user_id": current_user.id,
+                "product_id": payload.product_id
+            }
+        ).scalar() or 0
+
+        # 3. Chặn nếu số đánh giá đã bằng hoặc vượt quá số lần mua
+        if user_review_count >= purchase_count_result:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bạn đã hoàn thành đánh giá cho toàn bộ các lượt mua sản phẩm này. Hãy mua thêm lượt mới để tiếp tục đánh giá!",
+            )
+
+        # 4. Lưu đánh giá mới vào DB nếu hợp lệ
+        db.execute(
+            text("""
+                INSERT INTO reviews (user_id, product_id, rating, comment, image_url)
+                VALUES (:user_id, :product_id, :rating, :comment, :image_url)
+            """),
+            {
+                "user_id": current_user.id,
+                "product_id": payload.product_id,
+                "rating": payload.rating,
+                "comment": payload.comment,
+                "image_url": payload.image_url,
+            },
+        )
+        db.commit()
+
+        return {"status": "success", "message": "Gửi đánh giá sản phẩm thành công!"}
+
+    except HTTPException as he:
+        db.rollback()
+        raise he
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi hệ thống khi lưu đánh giá: {str(e)}",
+        )
+
+
+@router.get("/product/{product_id}/reviews")
+def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
+    """
+    Lấy danh sách đánh giá của 1 sản phẩm để hiển thị ở trang Chi tiết sản phẩm.
+    """
+    try:
+        reviews = db.execute(
+            text("""
+                SELECT r.id, r.user_id, r.rating, r.comment, r.image_url, r.created_at,
+                       COALESCE(u.email, 'Khách hàng') as user_name
+                FROM reviews r
+                LEFT JOIN users u ON r.user_id = u.id
+                WHERE r.product_id = :product_id
+                ORDER BY r.created_at DESC
+            """),
+            {"product_id": product_id},
+        ).fetchall()
+
+        result = []
+        for r in reviews:
+            result.append(
+                {
+                    "id": r.id,
+                    "user_id": r.user_id,
+                    "user_name": r.user_name,
+                    "rating": r.rating,
+                    "comment": r.comment,
+                    "image_url": r.image_url,
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                }
+            )
+
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi lấy danh sách đánh giá: {str(e)}",
         )
