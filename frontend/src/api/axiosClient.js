@@ -1,9 +1,8 @@
-// src/api/axiosClient.js
 import axios from 'axios';
 import { handleApiError } from './errorHandler';
 
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://shophub-production-c481.up.railway.app',
   headers: {
     'Content-Type': 'application/json',
   },
