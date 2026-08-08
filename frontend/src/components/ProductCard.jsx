@@ -124,7 +124,7 @@ const ProductCard = ({ product, quantity, onDelete }) => {
           transition: 'background-color 0.3s'
         }}>
           <img 
-            src={getImageUrl(product.imageUrl || product.image || product.image_url)} 
+            src={getImageUrl(product.image_path || product.imageUrl || product.image || product.image_url)} 
             alt={product.name} 
             style={{
               maxWidth: '85%',
