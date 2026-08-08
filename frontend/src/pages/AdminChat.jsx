@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
+const BACKEND_URL = 'https://shophub-production-c481.up.railway.app';
+const API_BASE = `${BACKEND_URL}/api/admin`;
+
 const AdminChat = () => {
   const [conversations, setConversations] = useState([]);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -10,8 +13,6 @@ const AdminChat = () => {
 
   const messagesContainerRef = useRef(null);
   const isInitialLoad = useRef(true);
-
-  const API_BASE = 'http://localhost:8000/api/admin';
 
   const fetchConversations = async () => {
     try {
