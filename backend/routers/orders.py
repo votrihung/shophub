@@ -116,7 +116,7 @@ def get_all_orders_admin(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # Cập nhật cho phép cả ADMIN và SHIPPER truy cập
+    # Cho phép cả ADMIN và SHIPPER truy cập
     if str(current_user.role).upper() not in ["ADMIN", "SHIPPER"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -433,7 +433,8 @@ def update_order_status(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    if str(current_user.role).upper() != "ADMIN":
+    # CẬP NHẬT: Cho phép cả ADMIN và SHIPPER đổi trạng thái
+    if str(current_user.role).upper() not in ["ADMIN", "SHIPPER"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền thực hiện hành động này.",
