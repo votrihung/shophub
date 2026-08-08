@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 
-const ALLOWED_STATUSES = ['PLACED', 'PROCESSING', 'SHIPPED', 'COMPLETED', 'CANCELED'];
+// Danh sách trạng thái chuẩn dành cho Admin chuyển đổi
+const ALLOWED_STATUSES = ['PLACED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELED'];
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -98,6 +99,7 @@ const OrderDetailPage = () => {
     }
   };
 
+  // Chuẩn hóa logic hiển thị Badge trạng thái (có dùng .trim() loại bỏ khoảng trắng ẩn)
   const getStatusBadgeData = (status) => {
     const baseStyle = {
       padding: '6px 14px',
@@ -107,16 +109,25 @@ const OrderDetailPage = () => {
       display: 'inline-block'
     };
     
-    switch (status) {
+    const st = status ? String(status).trim().toUpperCase() : '';
+
+    switch (st) {
       case 'PLACED':
+      case 'PENDING':
         return { style: { ...baseStyle, backgroundColor: '#dbeafe', color: '#1e40af' }, text: 'Chờ xác nhận' };
       case 'PROCESSING':
         return { style: { ...baseStyle, backgroundColor: '#fef3c7', color: '#92400e' }, text: 'Đang xử lý' };
       case 'SHIPPED':
+      case 'SHIPPING':
+      case 'DELIVERING':
         return { style: { ...baseStyle, backgroundColor: '#f3e8ff', color: '#6b21a8' }, text: 'Đang giao hàng' };
+      case 'DELIVERED':
       case 'COMPLETED':
+      case 'ĐÃ GIAO THÀNH CÔNG':
+      case 'HOÀN THÀNH':
         return { style: { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' }, text: 'Hoàn thành' };
       case 'CANCELED':
+      case 'CANCELLED':
         return { style: { ...baseStyle, backgroundColor: '#fee2e2', color: '#991b1b' }, text: 'Đã hủy' };
       default:
         return { style: { ...baseStyle, backgroundColor: '#f1f5f9', color: '#475569' }, text: status };
@@ -146,6 +157,9 @@ const OrderDetailPage = () => {
 
   const badge = getStatusBadgeData(order.status);
   const totalAmount = order.total_amount ?? order.total_price ?? 0;
+  const stUpper = order.status ? String(order.status).trim().toUpperCase() : '';
+  const isCompleted = ['DELIVERED', 'COMPLETED', 'HOÀN THÀNH', 'ĐÃ GIAO THÀNH CÔNG'].includes(stUpper);
+  const isPlaced = stUpper === 'PLACED' || stUpper === 'PENDING';
 
   return (
     <div style={{ maxWidth: '850px', margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif', color: '#1e293b' }}>
@@ -166,6 +180,7 @@ const OrderDetailPage = () => {
           </div>
         )}
 
+        {/* Header đơn hàng */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', padding: '24px' }}>
           <div>
             <h2 style={{ fontSize: '22px', fontWeight: '800', margin: 0 }}>Đơn Hàng #{order.id}</h2>
@@ -192,7 +207,7 @@ const OrderDetailPage = () => {
               </span>
             )}
 
-            {!isAdmin && order.status === 'PLACED' && (
+            {!isAdmin && isPlaced && (
               <button
                 onClick={handleUserCancelOrder}
                 style={{
@@ -212,17 +227,31 @@ const OrderDetailPage = () => {
           </div>
         </div>
 
-        {(order.customer_name || order.shipping_address) && (
-          <div style={{ padding: '16px 24px', backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '6px', color: '#334155' }}>📍 Thông tin giao hàng</h3>
-            <div style={{ fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
-              {order.customer_name && <div><strong>Người nhận:</strong> {order.customer_name} {order.phone && `(${order.phone})`}</div>}
-              {order.shipping_address && <div><strong>Địa chỉ:</strong> {order.shipping_address}</div>}
-              {order.note && <div><strong>Ghi chú:</strong> {order.note}</div>}
-            </div>
+        {/* Thông tin giao hàng & Vận chuyển */}
+        <div style={{ padding: '16px 24px', backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: '#334155' }}>📍 Thông tin giao hàng</h3>
+          <div style={{ fontSize: '13px', color: '#475569', lineHeight: '1.6' }}>
+            {order.customer_name && <div><strong>Người nhận:</strong> {order.customer_name} {order.phone && `(${order.phone})`}</div>}
+            {order.shipping_address && <div><strong>Địa chỉ:</strong> {order.shipping_address}</div>}
+            <div><strong>Đơn vị vận chuyển:</strong> 🚚 {order.shipping_method || 'Đội xe ShopHub'}</div>
+            {order.tracking_code && (
+              <div>
+                <strong>Mã vận đơn:</strong>{' '}
+                <a 
+                  href={`https://ghn.vn/blogs/trang-thai-don-hang?order_code=${order.tracking_code}`}
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ color: '#2563eb', fontWeight: 'bold', textDecoration: 'underline' }}
+                >
+                  #{order.tracking_code} (Tra cứu GHN)
+                </a>
+              </div>
+            )}
+            {order.note && <div><strong>Ghi chú:</strong> {order.note}</div>}
           </div>
-        )}
+        </div>
 
+        {/* Danh sách sản phẩm */}
         <div style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>📦 Danh sách sản phẩm</h3>
           <div style={{ border: '1px solid #f1f5f9', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
@@ -241,6 +270,7 @@ const OrderDetailPage = () => {
                   const price = item.product_price ?? item.price ?? item.unit_price ?? 0;
                   const lineTotal = item.line_total ?? (price * item.quantity);
                   const name = item.product_name || item.name || 'Sản phẩm';
+                  const productId = item.product_id || item.product?.id;
 
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -252,14 +282,35 @@ const OrderDetailPage = () => {
                             style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }} 
                             onError={(e) => { e.target.src = 'https://via.placeholder.com/50?text=No+Image'; }}
                           />
-                          <span style={{ fontWeight: '600', color: '#0f172a' }}>{name}</span>
+                          <div>
+                            <div style={{ fontWeight: '600', color: '#0f172a' }}>{name}</div>
+                            {/* Nút Đánh Giá nếu đơn hàng đã Hoàn Thành */}
+                            {!isAdmin && isCompleted && productId && (
+                              <button
+                                onClick={() => navigate(`/products/${productId}`)}
+                                style={{
+                                  marginTop: '4px',
+                                  backgroundColor: '#f59e0b',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '2px 8px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ⭐ Đánh giá sản phẩm
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#475569' }}>
                         {Number(price).toLocaleString('vi-VN')}đ
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        {isAdmin && order.status !== 'COMPLETED' && order.status !== 'CANCELED' ? (
+                        {isAdmin && !['COMPLETED', 'DELIVERED', 'CANCELED', 'CANCELLED', 'HOÀN THÀNH'].includes(stUpper) ? (
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                             <button 
                               onClick={() => handleAdminUpdateQuantity(item.id, item.quantity, -1)}

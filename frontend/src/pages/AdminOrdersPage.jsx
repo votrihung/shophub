@@ -41,17 +41,33 @@ const AdminOrdersPage = () => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter]);
 
+  // FIX 1: Thêm case 'DELIVERED' và chuẩn hóa chữ hoa/thường
   const getStatusStyle = (status) => {
-    switch (status) {
+    const st = status ? String(status).toUpperCase() : '';
+    switch (st) {
       case 'COMPLETED':
-        return { bg: '#dcfce7', color: '#166534', text: 'Hoàn thành' };
+      case 'DELIVERED':
+      case 'ĐÃ GIAO THÀNH CÔNG':
+      case 'GIAO THÀNH CÔNG':
+        return { bg: '#dcfce7', color: '#166534', text: 'Đã giao thành công' };
+
       case 'CANCELED':
       case 'CANCELLED':
+      case 'ĐÃ HỦY':
         return { bg: '#fee2e2', color: '#991b1b', text: 'Đã hủy' };
-      case 'PROCESSING':
+
       case 'SHIPPING':
+      case 'DELIVERING':
+      case 'ĐANG GIAO HÀNG':
+        return { bg: '#e0f2fe', color: '#0369a1', text: 'Đang giao' };
+
+      case 'PROCESSING':
+      case 'ĐANG XỬ LÝ':
         return { bg: '#e0f2fe', color: '#0369a1', text: 'Đang xử lý' };
+
       case 'PLACED':
+      case 'PENDING':
+      case 'CHỜ XÁC NHẬN':
       default:
         return { bg: '#fef3c7', color: '#92400e', text: 'Chờ xác nhận' };
     }
@@ -81,6 +97,7 @@ const AdminOrdersPage = () => {
     return `https://shophub-production-c481.up.railway.app${cleanPath}`;
   };
 
+  // FIX 2: Đồng bộ bộ lọc Tab cho chuẩn với trạng thái DELIVERED
   const filteredOrders = orders.filter((order) => {
     const term = searchTerm.trim().toLowerCase();
     const matchesSearch = 
@@ -90,10 +107,16 @@ const AdminOrdersPage = () => {
       (order.shipping_address && order.shipping_address.toLowerCase().includes(term));
 
     let matchesStatus = true;
+    const st = order.status ? String(order.status).toUpperCase() : '';
+
     if (statusFilter === 'ACTIVE') {
-      matchesStatus = order.status === 'PLACED' || order.status === 'PROCESSING' || order.status === 'SHIPPING';
+      matchesStatus = ['PLACED', 'PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERING'].includes(st);
+    } else if (statusFilter === 'COMPLETED') {
+      matchesStatus = ['COMPLETED', 'DELIVERED', 'ĐÃ GIAO THÀNH CÔNG'].includes(st);
+    } else if (statusFilter === 'CANCELED') {
+      matchesStatus = ['CANCELED', 'CANCELLED', 'ĐÃ HỦY'].includes(st);
     } else if (statusFilter !== 'ALL') {
-      matchesStatus = order.status === statusFilter;
+      matchesStatus = st === statusFilter;
     }
 
     return matchesSearch && matchesStatus;

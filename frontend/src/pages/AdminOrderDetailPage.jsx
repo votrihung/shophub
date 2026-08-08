@@ -9,6 +9,7 @@ const AdminOrderDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('');
   const [adminNote, setAdminNote] = useState('');
   const [updatingItemId, setUpdatingItemId] = useState(null); 
 
@@ -22,8 +23,8 @@ const AdminOrderDetailPage = () => {
       const response = await axios.get(`https://shophub-production-c481.up.railway.app/orders/${id}`, { headers });
       
       const data = response.data;
-      console.log("Order Data Backend Return:", data);
       setOrder(data);
+      setSelectedStatus(data.status || 'PLACED');
       setAdminNote(data.admin_note || data.adminNote || '');
 
       let name = data.customer_name || data.recipient_name || data.receiver_name || data.full_name || data.name || data.user?.full_name || data.user?.name || data.user?.username || data.user?.email || '';
@@ -65,6 +66,35 @@ const AdminOrderDetailPage = () => {
   useEffect(() => {
     fetchOrderDetail();
   }, [id]);
+
+  const handleUpdateStatus = async (newStatus = selectedStatus) => {
+    setUpdating(true);
+    try {
+      const token = localStorage.getItem('shophub_token');
+      const payload = { 
+        status: newStatus, 
+        admin_note: adminNote,
+        customer_name: customerInfo.name,
+        phone: customerInfo.phone,
+        shipping_address: customerInfo.address
+      };
+
+      const response = await axios.put(
+        `https://shophub-production-c481.up.railway.app/orders/${id}/status`, 
+        payload,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      
+      setOrder(response.data);
+      setSelectedStatus(response.data.status);
+      alert("Cập nhật trạng thái thành công!");
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || "Lỗi khi cập nhật trạng thái đơn hàng.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const handleSaveCustomerInfo = async () => {
     setUpdating(true);
@@ -171,9 +201,9 @@ const AdminOrderDetailPage = () => {
   const renderStatusBadge = (status) => {
     const statusMap = {
       PLACED: { label: 'Chờ xác nhận', bg: '#fef3c7', color: '#d97706' },
-      PROCESSING: { label: 'Đang xử lý', bg: '#e0f2fe', color: '#0284c7' },
-      SHIPPING: { label: 'Đang giao hàng', bg: '#e0e7ff', color: '#4f46e5' },
-      DELIVERED: { label: 'Đã giao (Hoàn thành)', bg: '#dcfce7', color: '#15803d' },
+      PROCESSING: { label: 'Đang xử lý / Đóng gói', bg: '#e0f2fe', color: '#0284c7' },
+      SHIPPING: { label: 'Đang giao hàng (Shipper)', bg: '#e0e7ff', color: '#4f46e5' },
+      DELIVERED: { label: 'Đã giao thành công', bg: '#dcfce7', color: '#15803d' },
       COMPLETED: { label: 'Hoàn thành', bg: '#dcfce7', color: '#15803d' },
       FAILED: { label: 'Giao thất bại', bg: '#fee2e2', color: '#b91c1c' },
       CANCELED: { label: 'Đã hủy', bg: '#f3f4f6', color: '#4b5563' },
@@ -185,10 +215,10 @@ const AdminOrderDetailPage = () => {
       <span style={{
         backgroundColor: current.bg,
         color: current.color,
-        padding: '6px 16px',
+        padding: '6px 14px',
         borderRadius: '20px',
         fontWeight: '700',
-        fontSize: '14px',
+        fontSize: '13px',
         display: 'inline-block'
       }}>
         ● {current.label}
@@ -196,7 +226,8 @@ const AdminOrderDetailPage = () => {
     );
   };
 
-  const isOrderClosed = order ? ["COMPLETED", "DELIVERED", "CANCELED", "CANCELLED"].includes(order.status) : false;
+  const isShipperHandled = ["SHIPPING", "DELIVERED", "COMPLETED", "FAILED"].includes(order?.status);
+  const isOrderClosed = ["COMPLETED", "DELIVERED", "CANCELED", "CANCELLED"].includes(order?.status);
 
   if (loading) {
     return (
@@ -235,10 +266,37 @@ const AdminOrderDetailPage = () => {
           </p>
         </div>
 
-        {/* Cập nhật: Ẩn select, thay bằng Badge chỉ xem */}
+        {/* CẬP NHẬT TRẠNG THÁI DÀNH CHO ADMIN */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#fff', padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>Trạng thái:</span>
-          {renderStatusBadge(order.status)}
+          
+          {isShipperHandled ? (
+            /* Khi đơn đã giao cho Shipper / Hoàn thành */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {renderStatusBadge(order.status)}
+              <span style={{ fontSize: '12px', color: '#94a3b8', italic: 'true' }}>(Shipper quản lý)</span>
+            </div>
+          ) : (
+            /* Admin chủ động cập nhật các bước chuẩn bị */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <select 
+                value={selectedStatus} 
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontWeight: '600', fontSize: '14px', outline: 'none' }}
+              >
+                <option value="PLACED">Chờ xác nhận (PLACED)</option>
+                <option value="PROCESSING">Đang xử lý/Đóng gói (PROCESSING)</option>
+                <option value="CANCELED">Hủy đơn hàng (CANCELED)</option>
+              </select>
+              <button 
+                onClick={() => handleUpdateStatus(selectedStatus)} 
+                disabled={updating}
+                style={{ padding: '6px 14px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: updating ? 'not-allowed' : 'pointer', fontSize: '14px' }}
+              >
+                {updating ? '...' : 'Cập nhật'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

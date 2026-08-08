@@ -9,24 +9,23 @@ const ShipperPage = () => {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [updatingId, setUpdatingId] = useState(null);
 
-  // Gọi đúng API quản lý đơn hàng duy nhất của Backend
   const fetchShipperOrders = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('shophub_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
+      // Lấy danh sách tất cả đơn hàng cho Shipper
       const res = await axios.get(`${API_BASE_URL}/orders/admin/all`, { headers });
 
-      console.log("🔥 DỮ LIỆU ĐƠN HÀNG SHIPPER:", res.data);
       const data = Array.isArray(res.data) ? res.data : (res.data.orders || res.data.data || []);
       setOrders(data);
     } catch (err) {
       console.error("Lỗi tải danh sách đơn hàng Shipper:", err);
       if (err.response?.status === 403) {
-        alert("🔒 Lỗi 403 (Forbidden): Tài khoản 'shipper' không có quyền gọi API '/orders/admin/all'.\n👉 Hãy đăng nhập bằng tài khoản ADMIN1 hoặc phân quyền cho Shipper ở Backend!");
+        alert("🔒 Lỗi 403 (Forbidden): Tài khoản của bạn không có quyền Shipper hoặc Admin.");
       } else {
-        alert("❌ Lỗi tải đơn hàng: " + (err.response?.data?.message || err.message));
+        alert("❌ Lỗi tải đơn hàng: " + (err.response?.data?.detail || err.response?.data?.message || err.message));
       }
     } finally {
       setLoading(false);
@@ -37,8 +36,8 @@ const ShipperPage = () => {
     fetchShipperOrders();
   }, []);
 
-  // Cập nhật trạng thái đơn hàng
-  const handleUpdateStatus = async (orderId, newStatus) => {
+  const handleUpdateStatus = async (order, newStatus) => {
+    const orderId = order.id || order.order_id;
     if (!window.confirm(`Xác nhận chuyển trạng thái đơn hàng #${orderId} sang "${getStatusLabel(newStatus)}"?`)) {
       return;
     }
@@ -48,13 +47,27 @@ const ShipperPage = () => {
       const token = localStorage.getItem('shophub_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      await axios.put(`${API_BASE_URL}/orders/${orderId}/status`, { status: newStatus }, { headers });
+      // ✅ ĐÃ SỬA: Gọi đúng endpoint `/shipper-status` và chỉ truyền `{ status }` đúng chuẩn Pydantic Schema ShipperStatusUpdate
+      const response = await axios.put(
+        `${API_BASE_URL}/orders/${orderId}/shipper-status`,
+        { status: newStatus },
+        { headers }
+      );
 
-      setOrders(prev => prev.map(o => (o.id === orderId || o.order_id === orderId) ? { ...o, status: newStatus } : o));
-      alert("✅ Cập nhật trạng thái thành công!");
+      const updatedOrder = response.data?.order;
+      const updatedStatus = updatedOrder?.status || newStatus;
+
+      setOrders(prev => prev.map(o => (o.id === orderId || o.order_id === orderId) ? { ...o, status: updatedStatus } : o));
+      alert("✅ Cập nhật trạng thái giao hàng thành công!");
     } catch (err) {
-      console.error("Lỗi cập nhật đơn hàng:", err);
-      alert("❌ Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại!");
+      console.error("Lỗi cập nhật đơn hàng:", err.response || err);
+      
+      const backendMessage = err.response?.data?.detail || err.response?.data?.message;
+      if (backendMessage) {
+        alert(`❌ Backend báo lỗi: ${typeof backendMessage === 'object' ? JSON.stringify(backendMessage) : backendMessage}`);
+      } else {
+        alert("❌ Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại quyền hạn hoặc kết nối!");
+      }
     } finally {
       setUpdatingId(null);
     }
@@ -64,8 +77,9 @@ const ShipperPage = () => {
     switch (status?.toUpperCase()) {
       case 'PLACED':
       case 'PENDING':
-        return 'Chờ xác nhận / Lấy hàng';
+        return 'Chờ xử lý / Đã đặt';
       case 'PROCESSING':
+        return 'Đã duyệt / Chuẩn bị hàng';
       case 'SHIPPING':
       case 'DELIVERING':
         return 'Đang giao hàng';
@@ -74,10 +88,11 @@ const ShipperPage = () => {
         return 'Giao thành công';
       case 'CANCELED':
       case 'CANCELLED':
+        return 'Đã hủy';
       case 'FAILED':
-        return 'Giao thất bại / Hủy';
+        return 'Giao thất bại';
       default:
-        return status || 'Đang xử lý';
+        return status || 'Không xác định';
     }
   };
 
@@ -105,8 +120,8 @@ const ShipperPage = () => {
   const filteredOrders = orders.filter(order => {
     if (filterStatus === 'ALL') return true;
     const st = order.status?.toUpperCase();
-    if (filterStatus === 'PENDING') return st === 'PLACED' || st === 'PENDING';
-    if (filterStatus === 'SHIPPING') return st === 'SHIPPING' || st === 'PROCESSING' || st === 'DELIVERING';
+    if (filterStatus === 'PENDING') return st === 'PLACED' || st === 'PENDING' || st === 'PROCESSING';
+    if (filterStatus === 'SHIPPING') return st === 'SHIPPING' || st === 'DELIVERING';
     if (filterStatus === 'DELIVERED') return st === 'COMPLETED' || st === 'DELIVERED';
     if (filterStatus === 'FAILED') return st === 'CANCELED' || st === 'CANCELLED' || st === 'FAILED';
     return true;
@@ -114,8 +129,8 @@ const ShipperPage = () => {
 
   const counts = {
     ALL: orders.length,
-    PENDING: orders.filter(o => ['PLACED', 'PENDING'].includes(o.status?.toUpperCase())).length,
-    SHIPPING: orders.filter(o => ['SHIPPING', 'PROCESSING', 'DELIVERING'].includes(o.status?.toUpperCase())).length,
+    PENDING: orders.filter(o => ['PLACED', 'PENDING', 'PROCESSING'].includes(o.status?.toUpperCase())).length,
+    SHIPPING: orders.filter(o => ['SHIPPING', 'DELIVERING'].includes(o.status?.toUpperCase())).length,
     DELIVERED: orders.filter(o => ['COMPLETED', 'DELIVERED'].includes(o.status?.toUpperCase())).length,
   };
 
@@ -143,7 +158,7 @@ const ShipperPage = () => {
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a' }}>{counts.ALL}</div>
         </div>
         <div style={{ backgroundColor: '#fefce8', padding: '12px', borderRadius: '10px', border: '1px solid #fef08a', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#854d0e' }}>Chờ lấy</div>
+          <div style={{ fontSize: '12px', color: '#854d0e' }}>Chờ nhận</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#a16207' }}>{counts.PENDING}</div>
         </div>
         <div style={{ backgroundColor: '#eff6ff', padding: '12px', borderRadius: '10px', border: '1px solid #bfdbfe', textAlign: 'center' }}>
@@ -202,6 +217,7 @@ const ShipperPage = () => {
             const total = Number(order.total_amount || order.totalPrice || order.total_price || 0);
             const isCOD = (order.payment_method || '').toUpperCase() === 'COD';
             const isUpdating = updatingId === id;
+            const statusUpper = order.status?.toUpperCase();
 
             return (
               <div 
@@ -260,36 +276,39 @@ const ShipperPage = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {['PLACED', 'PENDING'].includes(order.status?.toUpperCase()) && (
+                  {/* NÚT TẠO ĐƠN SANG SHIPPING */}
+                  {['PLACED', 'PENDING', 'PROCESSING'].includes(statusUpper) && (
                     <button
                       disabled={isUpdating}
-                      onClick={() => handleUpdateStatus(id, 'SHIPPING')}
-                      style={{ flex: 1, padding: '10px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
+                      onClick={() => handleUpdateStatus(order, 'SHIPPING')}
+                      style={{ flex: 1, padding: '10px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: isUpdating ? 'not-allowed' : 'pointer' }}
                     >
-                      🚀 Nhận đơn & Bắt đầu giao
+                      {isUpdating ? '⏳ Đang xử lý...' : '🚀 Nhận đơn & Bắt đầu giao'}
                     </button>
                   )}
 
-                  {['SHIPPING', 'PROCESSING', 'DELIVERING'].includes(order.status?.toUpperCase()) && (
+                  {/* NÚT CHUYỂN TRẠNG THÁI DELIVERED/FAILED */}
+                  {['SHIPPING', 'DELIVERING'].includes(statusUpper) && (
                     <>
                       <button
                         disabled={isUpdating}
-                        onClick={() => handleUpdateStatus(id, 'COMPLETED')}
-                        style={{ flex: 2, padding: '10px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
+                        onClick={() => handleUpdateStatus(order, 'DELIVERED')}
+                        style={{ flex: 2, padding: '10px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: isUpdating ? 'not-allowed' : 'pointer' }}
                       >
-                        ✅ Giao thành công (Thu tiền)
+                        {isUpdating ? '⏳ Đang xử lý...' : '✅ Giao thành công (DELIVERED)'}
                       </button>
                       <button
                         disabled={isUpdating}
-                        onClick={() => handleUpdateStatus(id, 'CANCELED')}
-                        style={{ flex: 1, padding: '10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
+                        onClick={() => handleUpdateStatus(order, 'FAILED')}
+                        style={{ flex: 1, padding: '10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: isUpdating ? 'not-allowed' : 'pointer' }}
                       >
                         ❌ Giao thất bại
                       </button>
                     </>
                   )}
 
-                  {['COMPLETED', 'DELIVERED', 'CANCELED', 'CANCELLED', 'FAILED'].includes(order.status?.toUpperCase()) && (
+                  {/* ĐƠN HÀNG ĐÃ KẾT THÚC */}
+                  {['COMPLETED', 'DELIVERED', 'CANCELED', 'CANCELLED', 'FAILED'].includes(statusUpper) && (
                     <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', width: '100%', textAlign: 'right' }}>
                       Đơn hàng đã hoàn tất
                     </div>
