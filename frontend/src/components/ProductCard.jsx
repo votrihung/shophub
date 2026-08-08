@@ -3,6 +3,19 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { getProductReviews } from '../api/ordersApi';
 
+const BACKEND_URL = 'https://shophub-production-c481.up.railway.app';
+
+const getImageUrl = (url) => {
+  if (!url) return 'https://via.placeholder.com/150';
+  if (url.includes('localhost:5000')) {
+    return url.replace('http://localhost:5000', BACKEND_URL);
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+  return url;
+};
+
 const ProductCard = ({ product, quantity, onDelete }) => {
   const { addToCart, updateQuantity, removeFromCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
@@ -110,9 +123,8 @@ const ProductCard = ({ product, quantity, onDelete }) => {
           borderRadius: '12px',
           transition: 'background-color 0.3s'
         }}>
-          {/* Đã thêm CSS ép ảnh nằm chính giữa tuyệt đối */}
           <img 
-            src={product.imageUrl || product.image || 'https://via.placeholder.com/150'} 
+            src={getImageUrl(product.imageUrl || product.image || product.image_url)} 
             alt={product.name} 
             style={{
               maxWidth: '85%',
