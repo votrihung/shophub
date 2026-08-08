@@ -36,18 +36,27 @@ const OrderHistoryPage = () => {
       display: 'inline-block'
     };
     
-    switch (status) {
+    // Chuẩn hóa chuỗi bằng trim và toUpperCase để tránh lỗi khoảng trắng/hoa thường
+    const st = status ? String(status).trim().toUpperCase() : '';
+
+    switch (st) {
       case 'PLACED':
+      case 'PENDING':
         return { style: { ...baseStyle, backgroundColor: '#dbeafe', color: '#1e40af' }, text: 'Chờ xác nhận' };
       case 'PROCESSING':
         return { style: { ...baseStyle, backgroundColor: '#fef3c7', color: '#92400e' }, text: 'Đang xử lý' };
       case 'SHIPPED':
+      case 'SHIPPING':
+      case 'DELIVERING':
         return { style: { ...baseStyle, backgroundColor: '#f3e8ff', color: '#6b21a8' }, text: 'Đang giao hàng' };
+      case 'DELIVERED':
       case 'COMPLETED':
-        return { style: { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' }, text: 'Hoàn thành' };
       case 'PAID':
-        return { style: { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' }, text: 'Đã thanh toán' };
+      case 'HOÀN THÀNH':
+      case 'ĐÃ GIAO THÀNH CÔNG':
+        return { style: { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' }, text: 'Hoàn thành' };
       case 'CANCELED':
+      case 'CANCELLED':
         return { style: { ...baseStyle, backgroundColor: '#fee2e2', color: '#991b1b' }, text: 'Đã hủy' };
       default:
         return { style: { ...baseStyle, backgroundColor: '#f1f5f9', color: '#475569' }, text: status };
@@ -98,7 +107,10 @@ const OrderHistoryPage = () => {
               {orders.map((order) => {
                 const badge = getStatusBadgeData(order.status);
                 const totalAmount = order.total_amount ?? order.total_price ?? 0;
-                const canReview = order.status === 'COMPLETED' || order.status === 'PAID';
+                
+                // Mở rộng điều kiện hiển thị nút đánh giá
+                const stUpper = order.status ? String(order.status).trim().toUpperCase() : '';
+                const canReview = ['COMPLETED', 'PAID', 'DELIVERED', 'HOÀN THÀNH', 'ĐÃ GIAO THÀNH CÔNG'].includes(stUpper);
 
                 return (
                   <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -115,7 +127,7 @@ const OrderHistoryPage = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {order.items && order.items.length > 0 ? (
                           order.items.map((item) => (
-                            <div key={item.id} style={{ fontSize: '13px', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                            <div key={item.id || item.product_id} style={{ fontSize: '13px', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                               <div>
                                 • <span style={{ fontWeight: '600' }}>{item.product_name || item.name}</span> 
                                 <span style={{ color: '#64748b', marginLeft: '6px' }}>(x{item.quantity})</span>
