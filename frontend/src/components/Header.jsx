@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -8,7 +8,13 @@ const Header = ({ title = "ShopHub" }) => {
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
   const { totalQuantity } = useCart();
+  
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isOrderOpen, setIsOrderOpen] = useState(false);
+
+  const adminDropdownRef = useRef(null);
+  const orderDropdownRef = useRef(null);
 
   const isAdmin = user && (
     user.role?.toUpperCase() === 'ADMIN' || 
@@ -18,44 +24,66 @@ const Header = ({ title = "ShopHub" }) => {
   useEffect(() => {
     if (totalQuantity > 0) {
       setIsAnimating(true);
+      const timer = setTimeout(() => setIsAnimating(false), 300);
+      return () => clearTimeout(timer);
     }
   }, [totalQuantity]);
 
   useEffect(() => {
-    if (!isAnimating) return;
-    const timer = setTimeout(() => setIsAnimating(false), 300);
-    return () => clearTimeout(timer);
-  }, [isAnimating]);
+    const handleClickOutside = (event) => {
+      if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target)) {
+        setIsAdminOpen(false);
+      }
+      if (orderDropdownRef.current && !orderDropdownRef.current.contains(event.target)) {
+        setIsOrderOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogoutClick = () => {
     logout();
-    alert('👋 Đã đăng xuất tài khoản thành công!');
+    alert(' Đã đăng xuất tài khoản thành công!');
     navigate('/login');
   };
 
   const isActive = (path) => location.pathname === path;
-  const isAdminActive = isActive('/admin/dashboard') || isActive('/admin/orders');
+  
+  const isAdminActive = isActive('/admin/dashboard') || isActive('/admin/orders') || isActive('/admin/chat');
+  const isOrderActive = isActive('/cart') || isActive('/orders/history');
 
   return (
-    <header style={{ 
-      backgroundColor: '#ffffff', 
-      borderBottom: '1px solid #f1f5f9', 
-      padding: '16px 24px', 
-      position: 'sticky', 
-      top: 0, 
-      zIndex: 1000,
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-      fontFamily: 'system-ui, sans-serif'
-    }}>
+    <header className="header-container">
       <style>{`
-        @keyframes bouncePop {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.3) rotate(-10deg); }
-          80% { transform: scale(0.9) rotate(5deg); }
-          100% { transform: scale(1) rotate(0); }
+        .header-container {
+          background-color: #ffffff;
+          border-bottom: 1px solid #f1f5f9;
+          padding: 16px 24px;
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+          font-family: system-ui, -apple-system, sans-serif;
         }
-        .cart-bounce-effect {
-          animation: bouncePop 0.3s ease-in-out !important;
+        .header-inner {
+          max-width: 1200px;
+          margin: 0 auto;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .brand-logo {
+          font-size: 26px;
+          font-weight: 850;
+          color: #0f172a;
+          text-decoration: none;
+          letter-spacing: -0.5px;
+        }
+        .nav-list {
+          display: flex;
+          align-items: center;
+          gap: 24px;
         }
         .nav-link {
           position: relative;
@@ -66,8 +94,11 @@ const Header = ({ title = "ShopHub" }) => {
           font-size: 15px;
           white-space: nowrap;
           transition: color 0.3s ease;
+          background: none;
+          border: none;
+          cursor: pointer;
         }
-        .nav-link:hover {
+        .nav-link:hover, .nav-active {
           color: #2563eb !important;
         }
         .nav-link::after {
@@ -80,37 +111,26 @@ const Header = ({ title = "ShopHub" }) => {
           background-color: #2563eb;
           transition: width 0.3s ease;
         }
-        .nav-link:hover::after {
-          width: 100%;
-        }
-        .nav-active {
-          color: #2563eb !important;
-        }
-        .nav-active::after {
+        .nav-link:hover::after, .nav-active::after {
           width: 100% !important;
         }
-
-        /* Dropdown Menu Admin Style */
         .admin-dropdown {
           position: relative;
           display: inline-block;
         }
         .admin-dropdown-menu {
-          display: none;
           position: absolute;
           top: 100%;
           left: 50%;
           transform: translateX(-50%);
           background-color: #ffffff;
-          min-width: 180px;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+          min-width: 200px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
           border-radius: 12px;
           padding: 8px;
           margin-top: 8px;
           border: 1px solid #f1f5f9;
           z-index: 1010;
-        }
-        .admin-dropdown:hover .admin-dropdown-menu {
           display: flex;
           flex-direction: column;
           gap: 4px;
@@ -124,12 +144,31 @@ const Header = ({ title = "ShopHub" }) => {
           border-radius: 8px;
           white-space: nowrap;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
         }
         .dropdown-item:hover {
           background-color: #eff6ff;
           color: #2563eb;
         }
-
+        .cart-badge {
+          background-color: #ef4444;
+          color: #fff;
+          font-size: 10px;
+          font-weight: 800;
+          border-radius: 50%;
+          padding: 2px 6px;
+          box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+          line-height: 1;
+        }
+        .user-section {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          border-left: 2px solid #e2e8f0;
+          padding-left: 20px;
+        }
         .logout-btn {
           padding: 8px 16px;
           background-color: #fee2e2;
@@ -140,12 +179,10 @@ const Header = ({ title = "ShopHub" }) => {
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
-          white-space: nowrap;
         }
         .logout-btn:hover {
           background-color: #ef4444;
           color: #ffffff;
-          transform: translateY(-1px);
         }
         .login-btn {
           padding: 8px 20px;
@@ -156,96 +193,127 @@ const Header = ({ title = "ShopHub" }) => {
           text-decoration: none;
           font-size: 14px;
           transition: all 0.2s ease;
-          display: inline-block;
-          white-space: nowrap;
         }
         .login-btn:hover {
           background-color: #1d4ed8;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        @keyframes bouncePop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.3) rotate(-10deg); }
+          80% { transform: scale(0.9) rotate(5deg); }
+          100% { transform: scale(1) rotate(0); }
+        }
+        .cart-bounce {
+          animation: bouncePop 0.3s ease-in-out !important;
         }
       `}</style>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        
-        <Link to="/" style={{ fontSize: '26px', fontWeight: '850', color: '#0f172a', textDecoration: 'none', letterSpacing: '-0.5px' }}>
-          {title}
-        </Link>
+      <div className="header-inner">
+        <Link to="/" className="brand-logo">{title}</Link>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <nav className="nav-list">
           <Link to="/" className={`nav-link ${isActive('/') ? 'nav-active' : ''}`}>
             Trang Chủ
           </Link>
+          
           <Link to="/products" className={`nav-link ${isActive('/products') ? 'nav-active' : ''}`}>
             Sản Phẩm
           </Link>
+          
           <Link to="/about" className={`nav-link ${isActive('/about') ? 'nav-active' : ''}`}>
             Giới Thiệu
           </Link>
-          
-          {/* Bổ sung nút Tài Khoản & Lịch Sử khi đã đăng nhập */}
+
           {user && (
-            <>
-              <Link to="/profile" className={`nav-link ${isActive('/profile') ? 'nav-active' : ''}`}>
-                Tài Khoản
-              </Link>
-              <Link to="/orders/history" className={`nav-link ${isActive('/orders/history') ? 'nav-active' : ''}`}>
-                Lịch Sử 
-              </Link>
-            </>
+            <Link to="/profile" className={`nav-link ${isActive('/profile') ? 'nav-active' : ''}`}>
+              Tài Khoản
+            </Link>
           )}
 
-          {isAdmin && (
-            <div className="admin-dropdown">
-              <span className={`nav-link ${isAdminActive ? 'nav-active' : ''}`} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                Quản Trị  ▾
-              </span>
-              <div className="admin-dropdown-menu">
-                <Link to="/admin/dashboard" className={`dropdown-item ${isActive('/admin/dashboard') ? 'nav-active' : ''}`}>
-                   Thống kê Dashboard
-                </Link>
-                <Link to="/admin/orders" className={`dropdown-item ${isActive('/admin/orders') ? 'nav-active' : ''}`}>
-                  Quản lý Đơn hàng
-                </Link>
-              </div>
-            </div>
-          )}
-
-          <Link 
-            to="/cart" 
-            className={`nav-link ${isActive('/cart') ? 'nav-active' : ''}`} 
-            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-          >
-            <div 
-              className={isAnimating ? 'cart-bounce-effect' : ''} 
-              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', transition: 'transform 0.2s' }}
+          <div className="admin-dropdown" ref={orderDropdownRef}>
+            <button 
+              type="button"
+              onClick={() => setIsOrderOpen(!isOrderOpen)}
+              className={`nav-link ${isOrderActive ? 'nav-active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
             >
-              <span>Giỏ Hàng </span>
+              <span>Đơn Hàng</span>
               {totalQuantity > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  right: '-14px',
-                  backgroundColor: '#ef4444',
-                  color: '#fff',
-                  fontSize: '10px',
-                  fontWeight: '800',
-                  borderRadius: '50%',
-                  padding: '2px 6px',
-                  textAlign: 'center',
-                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
-                  lineHeight: '1'
-                }}>
+                <span className={`cart-badge ${isAnimating ? 'cart-bounce' : ''}`} style={{ position: 'relative', top: '0', right: '0' }}>
                   {totalQuantity}
                 </span>
               )}
+              <span>{isOrderOpen ? '▴' : '▾'}</span>
+            </button>
+            
+            {isOrderOpen && (
+              <div className="admin-dropdown-menu">
+                <Link 
+                  to="/cart" 
+                  onClick={() => setIsOrderOpen(false)}
+                  className={`dropdown-item ${isActive('/cart') ? 'nav-active' : ''}`}
+                >
+                  <span>Giỏ Hàng</span>
+                  {totalQuantity > 0 && (
+                    <span className="cart-badge">{totalQuantity}</span>
+                  )}
+                </Link>
+
+                {user && (
+                  <Link 
+                    to="/orders/history" 
+                    onClick={() => setIsOrderOpen(false)}
+                    className={`dropdown-item ${isActive('/orders/history') ? 'nav-active' : ''}`}
+                  >
+                    <span>Lịch Sử Mua Hàng</span>
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
+          {isAdmin && (
+            <div className="admin-dropdown" ref={adminDropdownRef}>
+              <button 
+                type="button"
+                onClick={() => setIsAdminOpen(!isAdminOpen)}
+                className={`nav-link ${isAdminActive ? 'nav-active' : ''}`}
+              >
+                Quản Trị {isAdminOpen ? '▴' : '▾'}
+              </button>
+              
+              {isAdminOpen && (
+                <div className="admin-dropdown-menu">
+                  <Link 
+                    to="/admin/dashboard" 
+                    onClick={() => setIsAdminOpen(false)}
+                    className={`dropdown-item ${isActive('/admin/dashboard') ? 'nav-active' : ''}`}
+                  >
+                    Thống kê Dashboard
+                  </Link>
+                  <Link 
+                    to="/admin/orders" 
+                    onClick={() => setIsAdminOpen(false)}
+                    className={`dropdown-item ${isActive('/admin/orders') ? 'nav-active' : ''}`}
+                  >
+                    Quản lý Đơn hàng
+                  </Link>
+                  <Link 
+                    to="/admin/chat" 
+                    onClick={() => setIsAdminOpen(false)}
+                    className={`dropdown-item ${isActive('/admin/chat') ? 'nav-active' : ''}`}
+                  >
+                    Quản lý Tin Nhắn
+                  </Link>
+                </div>
+              )}
             </div>
-          </Link>
+          )}
 
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '2px solid #e2e8f0', paddingLeft: '20px' }}>
-              {/* Bấm thẳng vào tên chào mừng cũng sẽ chuyển tới /profile */}
-              <Link to="/profile" style={{ textDecoration: 'none', fontSize: '14.5px', fontWeight: '650', color: '#334155', whiteSpace: 'nowrap' }}>
-                👋 Chào bạn, <span style={{ color: '#2563eb', fontWeight: '700' }}>{user.name || user.email || 'Thành Viên'}</span>
+            <div className="user-section">
+              <Link to="/profile" style={{ textDecoration: 'none', fontSize: '14.5px', fontWeight: '650', color: '#334155' }}>
+                Chào bạn, <span style={{ color: '#2563eb' }}>{user.name || user.email || 'Thành Viên'}</span>
               </Link>
               <button onClick={handleLogoutClick} className="logout-btn">
                 Đăng xuất
@@ -257,7 +325,6 @@ const Header = ({ title = "ShopHub" }) => {
             </Link>
           )}
         </nav>
-
       </div>
     </header>
   );

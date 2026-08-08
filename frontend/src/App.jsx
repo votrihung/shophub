@@ -22,9 +22,14 @@ import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminOrderDetailPage from './pages/AdminOrderDetailPage';
 import AdminAddProductPage from './pages/AdminAddProductPage';
 import AdminDashboardPage from './pages/AdminDashboardPage'; 
+import AdminChat from './pages/AdminChat';
 
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+
+import { CheckoutPage } from './pages/CheckoutPage';
+// --- CẬP NHẬT: Import ShipperPage ---
+import ShipperPage from './pages/ShipperPage';
 
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext'; 
@@ -116,6 +121,25 @@ const App = () => {
               />
 
               <Route 
+                path="/checkout" 
+                element={
+                  <ProtectedRoute>
+                    <CheckoutPage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* --- CẬP NHẬT: Route ShipperPage --- */}
+              <Route 
+                path="/shipper" 
+                element={
+                  <ProtectedRoute>
+                    <ShipperPage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              <Route 
                 path="/orders/:orderId/payment" 
                 element={
                   <ProtectedRoute>
@@ -188,6 +212,7 @@ const App = () => {
                 <Route path="/admin/products/new" element={<AdminAddProductPage />} />
                 <Route path="/admin/orders" element={<AdminOrdersPage />} />
                 <Route path="/admin/orders/:id" element={<AdminOrderDetailPage />} />
+                <Route path="/admin/chat" element={<AdminChat />} />
               </Route>
               
               <Route

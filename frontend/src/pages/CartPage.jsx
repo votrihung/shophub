@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext'; 
 import axios from 'axios'; 
 
+const API_BASE_URL = 'https://shophub-production-c481.up.railway.app';
+
 const CartPage = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeFromCart, totalQuantity, totalPrice, clearCart } = useCart();
@@ -14,6 +16,12 @@ const CartPage = () => {
     note: ''
   });
 
+  const [shippingProvider, setShippingProvider] = useState('IN_HOUSE');
+  const [districtId, setDistrictId] = useState('');
+  const [wardCode, setWardCode] = useState('');
+  const [shippingFee, setShippingFee] = useState(30000); 
+  const [loadingFee, setLoadingFee] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +31,7 @@ const CartPage = () => {
       if (!token) return;
 
       try {
-        const response = await axios.get('https://shophub-production-c481.up.railway.app/auth/me', {
+        const response = await axios.get(`${API_BASE_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const user = response.data;
@@ -43,6 +51,39 @@ const CartPage = () => {
     fetchUserProfile();
   }, []);
 
+  useEffect(() => {
+    if (shippingProvider === 'IN_HOUSE') {
+      setShippingFee(30000);
+      return;
+    }
+
+    if (shippingProvider === 'GHN') {
+      if (!districtId || !wardCode) {
+        setShippingFee(35000); 
+        return;
+      }
+
+      setLoadingFee(true);
+      const token = localStorage.getItem('shophub_token') || '';
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      axios.post(`${API_BASE_URL}/orders/calculate-fee`, {
+        to_district_id: Number(districtId),
+        to_ward_code: String(wardCode),
+        weight: 1000
+      }, { headers })
+      .then(res => {
+        const calculatedFee = res.data?.shipping_fee || res.data?.fee || res.data?.total;
+        setShippingFee(calculatedFee ? Number(calculatedFee) : 35000);
+      })
+      .catch(err => {
+        console.warn("API GHN/Backend trả về lỗi (405 / Lỗi mạng), tự động dùng phí mặc định 35.000đ:", err);
+        setShippingFee(35000); // Fallback khi gặp lỗi 405 Method Not Allowed
+      })
+      .finally(() => setLoadingFee(false));
+    }
+  }, [shippingProvider, districtId, wardCode]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setShippingInfo(prev => ({ ...prev, [name]: value }));
@@ -55,6 +96,11 @@ const CartPage = () => {
       return;
     }
 
+    if (shippingProvider === 'GHN' && (!districtId || !wardCode)) {
+      alert('Vui lòng nhập ID Quận/Huyện và Mã Phường/Xã cho đơn vị GHN!');
+      return;
+    }
+
     setLoading(true);
 
     const orderItems = items.map(item => ({
@@ -63,6 +109,8 @@ const CartPage = () => {
       name: item.name,        
       price: Number(item.price)        
     }));
+
+    const finalTotalPrice = totalPrice + shippingFee;
 
     try {
       const token = localStorage.getItem('shophub_token') || '';
@@ -77,10 +125,14 @@ const CartPage = () => {
         recipient_name: shippingInfo.fullName,
         full_name: shippingInfo.fullName,
         address: shippingInfo.address,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        shipping_provider: shippingProvider,
+        to_district_id: districtId ? Number(districtId) : null,
+        to_ward_code: wardCode || null,
+        shipping_fee: shippingFee,
       };
 
-      const response = await axios.post('https://shophub-production-c481.up.railway.app/orders/checkout', payload, { headers });
+      const response = await axios.post(`${API_BASE_URL}/orders/checkout`, payload, { headers });
 
       if (response.status === 200 || response.status === 201) {
         const createdOrder = response.data;
@@ -89,23 +141,22 @@ const CartPage = () => {
 
         const paymentPayload = {
           order_id: orderId,
-          amount: totalPrice,
+          amount: finalTotalPrice,
           currency: "vnd"
         };
 
-        // Chuyển hướng theo Cổng thanh toán
         if (paymentMethod === 'VNPAY') {
           if (createdOrder.payment_url) {
             window.location.href = createdOrder.payment_url;
           } else {
-            const vnpRes = await axios.post('https://shophub-production-c481.up.railway.app/payments/vnpay/create-url', paymentPayload, { headers });
+            const vnpRes = await axios.post(`${API_BASE_URL}/payments/vnpay/create-url`, paymentPayload, { headers });
             window.location.href = vnpRes.data.payment_url || vnpRes.data.url;
           }
         } else if (paymentMethod === 'STRIPE') {
-          const stripeRes = await axios.post('https://shophub-production-c481.up.railway.app/payments/stripe/create-session', paymentPayload, { headers });
+          const stripeRes = await axios.post(`${API_BASE_URL}/payments/stripe/create-session`, paymentPayload, { headers });
           window.location.href = stripeRes.data.url;
         } else if (paymentMethod === 'PAYPAL') {
-          const paypalRes = await axios.post('https://shophub-production-c481.up.railway.app/payments/paypal/create-order', paymentPayload, { headers });
+          const paypalRes = await axios.post(`${API_BASE_URL}/payments/paypal/create-order`, paymentPayload, { headers });
           const redirectUrl = paypalRes.data.approve_url || paypalRes.data.url;
           
           if (redirectUrl) {
@@ -114,7 +165,6 @@ const CartPage = () => {
             navigate('/order-success');
           }
         } else {
-          // Trường hợp COD
           navigate('/order-success');
         }
       } else {
@@ -133,6 +183,8 @@ const CartPage = () => {
       setLoading(false);
     }
   };
+
+  const finalTotalPrice = totalPrice + shippingFee;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 16px', fontFamily: 'system-ui, sans-serif', color: '#1e293b', minHeight: '60vh' }}>
@@ -181,6 +233,44 @@ const CartPage = () => {
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Địa chỉ giao hàng *</label>
                 <input type="text" name="address" required value={shippingInfo.address} onChange={handleInputChange} placeholder="Số nhà, tên đường, quận..." style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13.5px', boxSizing: 'border-box' }} />
               </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Đơn vị vận chuyển *</label>
+                <select
+                  value={shippingProvider}
+                  onChange={(e) => setShippingProvider(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13.5px', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                >
+                  <option value="IN_HOUSE">🚚 ShopHub Delivery (Nội bộ - 30.000đ)</option>
+                  <option value="GHN">📦 Giao Hàng Nhanh (GHN)</option>
+                </select>
+              </div>
+
+              {shippingProvider === 'GHN' && (
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>ID Quận/Huyện *</label>
+                    <input
+                      type="number"
+                      placeholder="VD: 1442"
+                      value={districtId}
+                      onChange={(e) => setDistrictId(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Mã Phường/Xã *</label>
+                    <input
+                      type="text"
+                      placeholder="VD: 20109"
+                      value={wardCode}
+                      onChange={(e) => setWardCode(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Ghi chú đơn hàng</label>
                 <textarea name="note" rows="2" value={shippingInfo.note} onChange={handleInputChange} placeholder="Ghi chú thêm nếu có..." style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13.5px', resize: 'none', boxSizing: 'border-box' }}></textarea>
@@ -237,9 +327,19 @@ const CartPage = () => {
                   <span>Số lượng:</span>
                   <span style={{ fontWeight: 'bold' }}>{totalQuantity} sản phẩm</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+                  <span>Tiền hàng:</span>
+                  <span style={{ fontWeight: 'bold' }}>{totalPrice.toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+                  <span>Phí vận chuyển:</span>
+                  <span style={{ fontWeight: 'bold', color: '#2563eb' }}>
+                    {loadingFee ? 'Đang tính...' : `${shippingFee.toLocaleString('vi-VN')}đ`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', marginBottom: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
                   <span>Tổng tiền:</span>
-                  <span style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>{totalPrice.toLocaleString('vi-VN')}đ</span>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>{finalTotalPrice.toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>
 

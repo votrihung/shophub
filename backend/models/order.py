@@ -8,7 +8,7 @@ class OrderDB(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    status = Column(String(20), nullable=False, default="PLACED")
+    status = Column(String(20), nullable=False, default="PROCESSING")
     total_amount = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -17,7 +17,13 @@ class OrderDB(Base):
     shipping_address = Column(String(500), nullable=True)
     admin_note = Column(String(500), nullable=True)
 
-    user = relationship("User", backref="orders")
+    shipping_provider = Column(String(50), nullable=False, default="IN_HOUSE")
+    tracking_code = Column(String(100), nullable=True)
+    shipping_fee = Column(Float, nullable=False, default=0.0)
+    shipper_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id], backref="orders")
+    shipper = relationship("User", foreign_keys=[shipper_id])
     items = relationship("OrderItemDB", back_populates="order", cascade="all, delete-orphan")
 
 

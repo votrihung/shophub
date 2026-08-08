@@ -16,6 +16,11 @@ class CheckoutRequest(BaseModel):
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
     payment_method: Optional[str] = "COD"
+    
+    shipping_provider: str = "IN_HOUSE" 
+    shipping_fee: float = 0.0
+    to_district_id: Optional[int] = None
+    to_ward_code: Optional[str] = None
 
 
 class OrderItemRead(BaseModel):
@@ -41,6 +46,12 @@ class OrderRead(BaseModel):
     shipping_address: Optional[str] = None
     admin_note: Optional[str] = None
     payment_url: Optional[str] = None
+    
+    shipping_provider: Optional[str] = "IN_HOUSE"
+    tracking_code: Optional[str] = None
+    shipping_fee: Optional[float] = 0.0
+    shipper_id: Optional[int] = None
+    
     items: List[OrderItemRead]
 
     class Config:
@@ -55,19 +66,27 @@ class OrderSummary(BaseModel):
     customer_name: Optional[str] = None
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
+    
+    # Bổ sung thông tin giao hàng
+    shipping_provider: Optional[str] = "IN_HOUSE"
+    tracking_code: Optional[str] = None
+    shipping_fee: Optional[float] = 0.0
 
     class Config:
         from_attributes = True
 
 
 ALLOWED_STATUSES = [
+    "PENDING",
+    "PROCESSING",
+    "SHIPPING",
+    "DELIVERED",
+    "CANCELED",
+    "FAILED",
     "PLACED",
     "PAID",
-    "FAILED",
-    "PROCESSING",
     "SHIPPED",
     "COMPLETED",
-    "CANCELED",
 ]
 
 
@@ -77,6 +96,7 @@ class OrderStatusUpdate(BaseModel):
     customer_name: Optional[str] = None
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
+    shipper_id: Optional[int] = None
 
     @field_validator("status")
     @classmethod

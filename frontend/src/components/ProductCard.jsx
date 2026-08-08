@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { getProductReviews } from '../api/ordersApi'; // Import hàm lấy đánh giá chính xác của dự án
+import { getProductReviews } from '../api/ordersApi';
 
 const ProductCard = ({ product, quantity, onDelete }) => {
   const { addToCart, updateQuantity, removeFromCart } = useCart();
@@ -9,14 +9,12 @@ const ProductCard = ({ product, quantity, onDelete }) => {
   const [activeBtn, setActiveBtn] = useState(null);
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
 
-  // State lưu số sao và lượt đánh giá thật
   const [realRating, setRealRating] = useState({ rating: 0, count: 0 });
 
   const rawUser = localStorage.getItem('shophub_user');
   const userObj = rawUser ? JSON.parse(rawUser) : null;
   const isAdmin = userObj?.role === 'ADMIN';
 
-  // LẤY ĐÁNH GIÁ THẬT BẰNG HÀM getProductReviews DÀNH RIÊNG CHO SẢN PHẨM NÀY
   useEffect(() => {
     let isMounted = true;
 
@@ -65,7 +63,7 @@ const ProductCard = ({ product, quantity, onDelete }) => {
         setActiveBtn(null);
       }}
       style={{
-        border: isHovered ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+        border: isHovered ? '1px solid #3b82f6' : '1px solid #e2e8f0',
         borderRadius: '16px',
         padding: '16px',
         backgroundColor: '#fff',
@@ -78,15 +76,31 @@ const ProductCard = ({ product, quantity, onDelete }) => {
         boxSizing: 'border-box',
         transform: isHovered ? 'translateY(-6px)' : 'translateY(0)',
         boxShadow: isHovered 
-          ? '0 12px 24px -4px rgba(147, 197, 253, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.04)' 
-          : '0 2px 4px rgba(0,0,0,0.01)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          ? '0 12px 24px -4px rgba(59, 130, 246, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.04)' 
+          : '0 2px 4px rgba(0,0,0,0.02)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative'
       }}
     >
+      <span style={{
+        position: 'absolute',
+        top: '12px',
+        left: '12px',
+        backgroundColor: '#ef4444',
+        color: '#fff',
+        fontSize: '11px',
+        fontWeight: 'bold',
+        padding: '3px 8px',
+        borderRadius: '6px',
+        zIndex: 1
+      }}>
+        🔥 Nổi bật
+      </span>
+
       <Link to={`/products/${product.id}`} style={{ display: 'block', width: '100%', cursor: 'pointer', textDecoration: 'none' }}>
         <div style={{
           width: '100%',
-          height: '150px', 
+          height: '160px', 
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -96,14 +110,19 @@ const ProductCard = ({ product, quantity, onDelete }) => {
           borderRadius: '12px',
           transition: 'background-color 0.3s'
         }}>
+          {/* Đã thêm CSS ép ảnh nằm chính giữa tuyệt đối */}
           <img 
             src={product.imageUrl || product.image || 'https://via.placeholder.com/150'} 
             alt={product.name} 
             style={{
               maxWidth: '85%',
               maxHeight: '85%',
+              width: 'auto',
+              height: 'auto',
+              margin: '0 auto',
+              display: 'block',
               objectFit: 'contain',
-              transform: isHovered ? 'scale(1.06)' : 'scale(1)',
+              transform: isHovered ? 'scale(1.08)' : 'scale(1)',
               transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           />
@@ -113,7 +132,7 @@ const ProductCard = ({ product, quantity, onDelete }) => {
       <div style={{ flexGrow: 1, marginBottom: '14px', width: '100%' }}>
         <Link to={`/products/${product.id}`} style={{ textDecoration: 'none' }}>
           <h3 style={{ 
-            fontSize: '15.5px', 
+            fontSize: '16px', 
             fontWeight: '700', 
             color: isHovered ? '#2563eb' : '#1e293b',
             margin: '0 0 6px 0',
@@ -128,7 +147,7 @@ const ProductCard = ({ product, quantity, onDelete }) => {
         <p style={{ 
           fontSize: '12.5px', 
           color: '#64748b', 
-          margin: '0 0 6px 0',
+          margin: '0 0 8px 0',
           display: '-webkit-box',
           WebkitLineClamp: '2',
           WebkitBoxOrient: 'vertical',
@@ -169,79 +188,89 @@ const ProductCard = ({ product, quantity, onDelete }) => {
           )}
         </div>
 
-        <p style={{ fontSize: '17px', fontWeight: '800', color: '#ef4444', margin: '0' }}>
+        <p style={{ fontSize: '18px', fontWeight: '800', color: '#ef4444', margin: '0' }}>
           {product.price?.toLocaleString('vi-VN')}đ
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: 'auto', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button 
-            onClick={handleDecrease}
-            onMouseDown={() => setActiveBtn('minus')}
-            onMouseUp={() => setActiveBtn(null)}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              border: '1px solid #cbd5e1',
-              backgroundColor: activeBtn === 'minus' ? '#f1f5f9' : '#fff',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-              color: '#475569',
-              transform: activeBtn === 'minus' ? 'scale(0.9)' : 'scale(1)',
-              boxShadow: activeBtn === 'minus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
-              transition: 'all 0.15s ease',
-              outline: 'none'
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#fff'; }}
-          >
-            -
-          </button>
-
-          <span style={{ 
-            fontSize: '15px', 
-            fontWeight: '800', 
-            color: quantity > 0 ? '#2563eb' : '#475569',
-            minWidth: '20px',
-            transition: 'color 0.2s'
-          }}>
-            {quantity}
-          </span>
-
-          <button 
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: 'auto', width: '100%' }}>
+        
+        {quantity === 0 ? (
+          <button
             onClick={handleIncrease}
-            onMouseDown={() => setActiveBtn('plus')}
-            onMouseUp={() => setActiveBtn(null)}
             style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              border: '1px solid #cbd5e1',
-              backgroundColor: activeBtn === 'plus' ? '#f1f5f9' : '#fff',
+              width: '100%',
+              padding: '10px 16px',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: '700',
               cursor: 'pointer',
-              fontWeight: 'bold',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '16px',
-              color: '#475569',
-              transform: activeBtn === 'plus' ? 'scale(0.9)' : 'scale(1)',
-              boxShadow: activeBtn === 'plus' ? 'none' : '0 2px 4px rgba(0,0,0,0.02)',
-              transition: 'all 0.15s ease',
-              outline: 'none'
+              gap: '6px',
+              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)',
+              transition: 'all 0.2s ease'
             }}
-            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.backgroundColor = '#fff'; }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
           >
-            +
+            🛒 Thêm vào giỏ
           </button>
-        </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            width: '100%',
+            backgroundColor: '#f1f5f9',
+            borderRadius: '10px',
+            padding: '4px 8px'
+          }}>
+            <button 
+              onClick={handleDecrease}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#fff',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '16px',
+                color: '#475569',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
+              -
+            </button>
+
+            <span style={{ fontSize: '15px', fontWeight: '800', color: '#2563eb' }}>
+              {quantity} trong giỏ
+            </span>
+
+            <button 
+              onClick={handleIncrease}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#2563eb',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
+              +
+            </button>
+          </div>
+        )}
 
         {isAdmin && (
           <button
@@ -250,19 +279,16 @@ const ProductCard = ({ product, quantity, onDelete }) => {
             onMouseLeave={() => setIsDeleteHovered(false)}
             style={{
               width: '100%',
-              padding: '8px 12px',
+              padding: '6px 12px',
               marginTop: '4px',
-              backgroundColor: isDeleteHovered ? '#dc2626' : '#ef4444',
-              color: '#fff',
+              backgroundColor: isDeleteHovered ? '#dc2626' : '#fee2e2',
+              color: isDeleteHovered ? '#fff' : '#ef4444',
               border: 'none',
               borderRadius: '8px',
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: isDeleteHovered ? '0 4px 6px -1px rgba(239, 68, 68, 0.2)' : 'none',
-              transform: isDeleteHovered ? 'scale(1.02)' : 'scale(1)',
-              transition: 'all 0.2s ease',
-              outline: 'none'
+              transition: 'all 0.2s ease'
             }}
           >
             🗑️ Xóa Sản Phẩm

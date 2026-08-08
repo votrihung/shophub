@@ -12,7 +12,8 @@ import models.product
 import models.user
 import models.order
 
-from routers import products, auth, orders, admin_stats
+# 1. Thêm 'chat' vào import
+from routers import products, auth, orders, admin_stats, chat 
 from routers.payments import router as payments_router
 
 app = FastAPI(title="ShopHub Product API với PostgreSQL", version="2.0.0")
@@ -37,6 +38,7 @@ app.include_router(auth.router)
 app.include_router(orders.router)
 app.include_router(payments_router)
 app.include_router(admin_stats.router)
+app.include_router(chat.router) # 2. Đăng ký router chat vào FastAPI
 
 @app.get("/")
 def read_root():
