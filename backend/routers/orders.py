@@ -116,7 +116,8 @@ def get_all_orders_admin(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    if str(current_user.role).upper() != "ADMIN":
+    # Cập nhật cho phép cả ADMIN và SHIPPER truy cập
+    if str(current_user.role).upper() not in ["ADMIN", "SHIPPER"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền truy cập trang này.",
@@ -296,8 +297,9 @@ async def checkout(
                 tracking_code = await create_ghn_order(ghn_payload)
             except Exception as ghn_err:
                 print(f"Bỏ qua lỗi tạo mã GHN: {ghn_err}")
-                tracking_code = "GHN_PENDING"
+                tracking_code = None
 
+        # 1. Tạo đơn hàng tạm
         new_order = OrderDB(
             user_id=current_user.id,
             status="PROCESSING",
@@ -311,7 +313,12 @@ async def checkout(
         )
 
         db.add(new_order)
-        db.flush()
+        db.flush()  # Lấy new_order.id ngay lập tức
+
+        # 2. Xử lý gán tracking code nếu GHN API chưa trả về hoặc bị lỗi
+        if payload.shipping_provider == "GHN":
+            if not new_order.tracking_code or new_order.tracking_code == "GHN_PENDING":
+                new_order.tracking_code = f"GHN{new_order.id:06d}"
 
         for item in payload.items:
             product = db.query(ProductDB).filter(ProductDB.id == item.product_id).first()

@@ -16,10 +16,14 @@ const Header = ({ title = "ShopHub" }) => {
   const adminDropdownRef = useRef(null);
   const orderDropdownRef = useRef(null);
 
+  // Kiểm tra quyền Admin
   const isAdmin = user && (
     user.role?.toUpperCase() === 'ADMIN' || 
     user.username?.toLowerCase().includes('admin')
   );
+
+  // --- CẬP NHẬT: Kiểm tra quyền Shipper ---
+  const isShipper = user && user.role?.toUpperCase() === 'SHIPPER';
 
   useEffect(() => {
     if (totalQuantity > 0) {
@@ -44,7 +48,7 @@ const Header = ({ title = "ShopHub" }) => {
 
   const handleLogoutClick = () => {
     logout();
-    alert(' Đã đăng xuất tài khoản thành công!');
+    alert('Đã đăng xuất tài khoản thành công!');
     navigate('/login');
   };
 
@@ -113,6 +117,19 @@ const Header = ({ title = "ShopHub" }) => {
         }
         .nav-link:hover::after, .nav-active::after {
           width: 100% !important;
+        }
+        /* --- Nút Shipper nổi bật --- */
+        .shipper-link {
+          color: #ea580c !important;
+          background-color: #fff7ed;
+          padding: 6px 14px;
+          border-radius: 8px;
+          border: 1px solid #ffedd5;
+          font-weight: 700 !important;
+        }
+        .shipper-link:hover {
+          background-color: #ffedd5;
+          color: #c2410c !important;
         }
         .admin-dropdown {
           position: relative;
@@ -223,6 +240,16 @@ const Header = ({ title = "ShopHub" }) => {
           <Link to="/about" className={`nav-link ${isActive('/about') ? 'nav-active' : ''}`}>
             Giới Thiệu
           </Link>
+
+          {/* --- Nút điều hướng riêng cho Shipper --- */}
+          {isShipper && (
+            <Link 
+              to="/shipper" 
+              className={`nav-link shipper-link ${isActive('/shipper') ? 'nav-active' : ''}`}
+            >
+              🚚 Đơn Cần Giao
+            </Link>
+          )}
 
           {user && (
             <Link to="/profile" className={`nav-link ${isActive('/profile') ? 'nav-active' : ''}`}>

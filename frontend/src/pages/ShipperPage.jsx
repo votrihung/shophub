@@ -9,19 +9,25 @@ const ShipperPage = () => {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [updatingId, setUpdatingId] = useState(null);
 
-  // Tải danh sách đơn hàng dành cho Shipper
+  // Gọi đúng API quản lý đơn hàng duy nhất của Backend
   const fetchShipperOrders = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('shophub_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Gọi API lấy danh sách đơn hàng
-      const res = await axios.get(`${API_BASE_URL}/orders`, { headers });
-      const data = Array.isArray(res.data) ? res.data : (res.data.orders || []);
+      const res = await axios.get(`${API_BASE_URL}/orders/admin/all`, { headers });
+
+      console.log("🔥 DỮ LIỆU ĐƠN HÀNG SHIPPER:", res.data);
+      const data = Array.isArray(res.data) ? res.data : (res.data.orders || res.data.data || []);
       setOrders(data);
     } catch (err) {
       console.error("Lỗi tải danh sách đơn hàng Shipper:", err);
+      if (err.response?.status === 403) {
+        alert("🔒 Lỗi 403 (Forbidden): Tài khoản 'shipper' không có quyền gọi API '/orders/admin/all'.\n👉 Hãy đăng nhập bằng tài khoản ADMIN1 hoặc phân quyền cho Shipper ở Backend!");
+      } else {
+        alert("❌ Lỗi tải đơn hàng: " + (err.response?.data?.message || err.message));
+      }
     } finally {
       setLoading(false);
     }
@@ -42,13 +48,8 @@ const ShipperPage = () => {
       const token = localStorage.getItem('shophub_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      await axios.put(
-        `${API_BASE_URL}/orders/${orderId}/status`,
-        { status: newStatus },
-        { headers }
-      );
+      await axios.put(`${API_BASE_URL}/orders/${orderId}/status`, { status: newStatus }, { headers });
 
-      // Cập nhật trực tiếp trên UI
       setOrders(prev => prev.map(o => (o.id === orderId || o.order_id === orderId) ? { ...o, status: newStatus } : o));
       alert("✅ Cập nhật trạng thái thành công!");
     } catch (err) {
@@ -59,18 +60,19 @@ const ShipperPage = () => {
     }
   };
 
-  // Nhãn hiển thị trạng thái
   const getStatusLabel = (status) => {
     switch (status?.toUpperCase()) {
+      case 'PLACED':
       case 'PENDING':
+        return 'Chờ xác nhận / Lấy hàng';
       case 'PROCESSING':
-        return 'Chờ lấy hàng';
       case 'SHIPPING':
       case 'DELIVERING':
         return 'Đang giao hàng';
-      case 'DELIVERED':
       case 'COMPLETED':
+      case 'DELIVERED':
         return 'Giao thành công';
+      case 'CANCELED':
       case 'CANCELLED':
       case 'FAILED':
         return 'Giao thất bại / Hủy';
@@ -79,43 +81,42 @@ const ShipperPage = () => {
     }
   };
 
-  // Màu sắc badge trạng thái
   const getStatusBadgeStyle = (status) => {
     switch (status?.toUpperCase()) {
+      case 'PLACED':
       case 'PENDING':
+        return { backgroundColor: '#fef3c7', color: '#92400e' };
       case 'PROCESSING':
-        return { backgroundColor: '#fef3c7', color: '#b45309' };
       case 'SHIPPING':
       case 'DELIVERING':
-        return { backgroundColor: '#dbeafe', color: '#1d4ed8' };
-      case 'DELIVERED':
+        return { backgroundColor: '#e0f2fe', color: '#0369a1' };
       case 'COMPLETED':
-        return { backgroundColor: '#dcfce7', color: '#15803d' };
+      case 'DELIVERED':
+        return { backgroundColor: '#dcfce7', color: '#166534' };
+      case 'CANCELED':
       case 'CANCELLED':
       case 'FAILED':
-        return { backgroundColor: '#fee2e2', color: '#b91c1c' };
+        return { backgroundColor: '#fee2e2', color: '#991b1b' };
       default:
         return { backgroundColor: '#f1f5f9', color: '#475569' };
     }
   };
 
-  // Lọc danh sách đơn theo tab
   const filteredOrders = orders.filter(order => {
     if (filterStatus === 'ALL') return true;
     const st = order.status?.toUpperCase();
-    if (filterStatus === 'PENDING') return st === 'PENDING' || st === 'PROCESSING';
-    if (filterStatus === 'SHIPPING') return st === 'SHIPPING' || st === 'DELIVERING';
-    if (filterStatus === 'DELIVERED') return st === 'DELIVERED' || st === 'COMPLETED';
-    if (filterStatus === 'FAILED') return st === 'CANCELLED' || st === 'FAILED';
+    if (filterStatus === 'PENDING') return st === 'PLACED' || st === 'PENDING';
+    if (filterStatus === 'SHIPPING') return st === 'SHIPPING' || st === 'PROCESSING' || st === 'DELIVERING';
+    if (filterStatus === 'DELIVERED') return st === 'COMPLETED' || st === 'DELIVERED';
+    if (filterStatus === 'FAILED') return st === 'CANCELED' || st === 'CANCELLED' || st === 'FAILED';
     return true;
   });
 
-  // Đếm số lượng đơn từng loại
   const counts = {
     ALL: orders.length,
-    PENDING: orders.filter(o => ['PENDING', 'PROCESSING'].includes(o.status?.toUpperCase())).length,
-    SHIPPING: orders.filter(o => ['SHIPPING', 'DELIVERING'].includes(o.status?.toUpperCase())).length,
-    DELIVERED: orders.filter(o => ['DELIVERED', 'COMPLETED'].includes(o.status?.toUpperCase())).length,
+    PENDING: orders.filter(o => ['PLACED', 'PENDING'].includes(o.status?.toUpperCase())).length,
+    SHIPPING: orders.filter(o => ['SHIPPING', 'PROCESSING', 'DELIVERING'].includes(o.status?.toUpperCase())).length,
+    DELIVERED: orders.filter(o => ['COMPLETED', 'DELIVERED'].includes(o.status?.toUpperCase())).length,
   };
 
   return (
@@ -198,7 +199,7 @@ const ShipperPage = () => {
             const customerName = order.customer_name || order.full_name || order.recipient_name || 'Khách hàng';
             const phone = order.phone || order.phone_number || 'N/A';
             const address = order.shipping_address || order.address || 'Chưa cung cấp địa chỉ';
-            const total = Number(order.total_price || order.amount || order.total || 0);
+            const total = Number(order.total_amount || order.totalPrice || order.total_price || 0);
             const isCOD = (order.payment_method || '').toUpperCase() === 'COD';
             const isUpdating = updatingId === id;
 
@@ -213,7 +214,6 @@ const ShipperPage = () => {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.05)' 
                 }}
               >
-                {/* DÒNG 1: Mã đơn & Trạng thái */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontWeight: '800', fontSize: '15px' }}>Đơn hàng #{id}</span>
                   <span style={{ 
@@ -227,7 +227,6 @@ const ShipperPage = () => {
                   </span>
                 </div>
 
-                {/* THÔNG TIN KHÁCH HÀNG */}
                 <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '13.5px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>👤 <strong>{customerName}</strong></span>
@@ -245,7 +244,6 @@ const ShipperPage = () => {
                   {order.note && <div style={{ color: '#d97706', fontStyle: 'italic' }}>📝 Ghi chú: {order.note}</div>}
                 </div>
 
-                {/* TIỀN VÀ THANH TOÁN */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderTop: '1px dashed #e2e8f0', paddingTop: '10px' }}>
                   <div>
                     <span style={{ fontSize: '12px', color: '#64748b' }}>Hình thức: </span>
@@ -261,10 +259,8 @@ const ShipperPage = () => {
                   </div>
                 </div>
 
-                {/* CÁC NÚT THAO TÁC CHO SHIPPER */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {/* Nếu đơn đang CHỜ LẤY -> Nút "Bắt đầu giao" */}
-                  {['PENDING', 'PROCESSING'].includes(order.status?.toUpperCase()) && (
+                  {['PLACED', 'PENDING'].includes(order.status?.toUpperCase()) && (
                     <button
                       disabled={isUpdating}
                       onClick={() => handleUpdateStatus(id, 'SHIPPING')}
@@ -274,19 +270,18 @@ const ShipperPage = () => {
                     </button>
                   )}
 
-                  {/* Nếu đơn ĐANG GIAO -> Nút "Đã giao" & "Thất bại" */}
-                  {['SHIPPING', 'DELIVERING'].includes(order.status?.toUpperCase()) && (
+                  {['SHIPPING', 'PROCESSING', 'DELIVERING'].includes(order.status?.toUpperCase()) && (
                     <>
                       <button
                         disabled={isUpdating}
-                        onClick={() => handleUpdateStatus(id, 'DELIVERED')}
+                        onClick={() => handleUpdateStatus(id, 'COMPLETED')}
                         style={{ flex: 2, padding: '10px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
                       >
                         ✅ Giao thành công (Thu tiền)
                       </button>
                       <button
                         disabled={isUpdating}
-                        onClick={() => handleUpdateStatus(id, 'FAILED')}
+                        onClick={() => handleUpdateStatus(id, 'CANCELED')}
                         style={{ flex: 1, padding: '10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
                       >
                         ❌ Giao thất bại
@@ -294,10 +289,9 @@ const ShipperPage = () => {
                     </>
                   )}
 
-                  {/* Nếu đơn ĐÃ HOÀN THÀNH HOẶC HỦY -> Nút xem chi tiết hoặc hoàn tất */}
-                  {['DELIVERED', 'COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status?.toUpperCase()) && (
+                  {['COMPLETED', 'DELIVERED', 'CANCELED', 'CANCELLED', 'FAILED'].includes(order.status?.toUpperCase()) && (
                     <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', width: '100%', textAlign: 'right' }}>
-                      Đơn hàng đã kết thúc
+                      Đơn hàng đã hoàn tất
                     </div>
                   )}
                 </div>

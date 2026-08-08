@@ -3,6 +3,13 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+# Schema yêu cầu tính phí vận chuyển từ GHN
+class ShippingFeeRequest(BaseModel):
+    to_district_id: int
+    to_ward_code: str
+    weight: Optional[int] = 1000
+
+
 class OrderItemCreate(BaseModel):
     product_id: int
     name: str

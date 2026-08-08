@@ -10,7 +10,8 @@ const AdminAddProductPage = () => {
     description: '',
     price: '',
     category: 'Phone',
-    stock: '10'
+    stock: '10',
+    imageUrl: ''
   });
   const [imageFile, setImageFile] = useState(null);
 
@@ -26,6 +27,12 @@ const AdminAddProductPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.imageUrl.trim() && !imageFile) {
+      alert('⚠️ Vui lòng dán Link ảnh Online HOẶC chọn file ảnh từ máy!');
+      return;
+    }
+
     setLoading(true);
     try {
       const data = new FormData();
@@ -35,18 +42,29 @@ const AdminAddProductPage = () => {
       data.append('category', formData.category);
       data.append('stock', parseInt(formData.stock, 10));
 
-      // Tự động tính costPrice (80% giá bán) gửi lên cho Backend khỏi bắt lỗi
       const calculatedCostPrice = Math.round(Number(formData.price) * 0.8);
       data.append('costPrice', calculatedCostPrice);
 
-      if (imageFile) {
+      if (formData.imageUrl.trim()) {
+        data.append('imageUrl', formData.imageUrl.trim());
+        data.append('image_url', formData.imageUrl.trim());
+
+        try {
+          const res = await fetch(formData.imageUrl.trim());
+          const blob = await res.blob();
+          const file = new File([blob], 'product_image.jpg', { type: blob.type || 'image/jpeg' });
+          data.append('image', file);
+        } catch (fetchErr) {
+          const emptyBlob = new Blob(['dummy'], { type: 'image/jpeg' });
+          data.append('image', new File([emptyBlob], 'dummy.jpg'));
+        }
+      } else if (imageFile) {
         data.append('image', imageFile);
       }
 
       await productsApi.create(data);
       alert('✅ Thành công: Đã lưu sản phẩm vào hệ thống!');
       
-      // Load lại trang để kéo dữ liệu mới từ DB
       window.location.href = '/products';
     } catch (err) {
       console.error('Lỗi thêm sản phẩm:', err);
@@ -95,9 +113,34 @@ const AdminAddProductPage = () => {
           </select>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Hình ảnh sản phẩm *</label>
-          <input type="file" accept="image/*" required onChange={handleFileChange} style={{ width: '100%', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '8px', boxSizing: 'border-box' }} />
+        <div style={{ padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#f8fafc' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: '#0f172a' }}>
+            🖼️ Hình ảnh sản phẩm *
+          </label>
+          
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: '600' }}>👉 Khuyên dùng: Dán Link ảnh Online (Postimages, Imgur...)</span>
+            <input 
+              type="url" 
+              name="imageUrl" 
+              value={formData.imageUrl} 
+              onChange={handleInputChange} 
+              placeholder="Dán link trực tiếp (Ví dụ: https://i.postimg.cc/xxx/anh.webp)" 
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', boxSizing: 'border-box', marginTop: '4px' }} 
+            />
+          </div>
+
+          <div style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8', margin: '6px 0' }}>— HOẶC —</div>
+
+          <div>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Tải file từ máy:</span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleFileChange} 
+              style={{ width: '100%', padding: '6px', border: '1px dashed #cbd5e1', borderRadius: '8px', boxSizing: 'border-box', marginTop: '4px', backgroundColor: '#fff' }} 
+            />
+          </div>
         </div>
 
         <div>

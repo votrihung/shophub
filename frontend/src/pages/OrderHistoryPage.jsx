@@ -63,8 +63,8 @@ const OrderHistoryPage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif', color: '#1e293b', minHeight: '60vh' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>📋 Lịch Sử Đơn Hàng</h2>
+    <div style={{ maxWidth: '1100px', margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif', color: '#1e293b', minHeight: '60vh' }}>
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}> Lịch Sử Đơn Hàng</h2>
 
       {error && (
         <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px' }}>
@@ -77,7 +77,7 @@ const OrderHistoryPage = () => {
           <span style={{ fontSize: '50px' }}>📦</span>
           <p style={{ color: '#64748b', margin: '16px 0 24px 0', fontStyle: 'italic' }}>Bạn chưa đặt bất kỳ đơn hàng nào.</p>
           <button onClick={() => navigate('/products')} style={{ padding: '12px 24px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
-            Mua sắm ngay 🛒
+            Mua sắm ngay 
           </button>
         </div>
       ) : (
@@ -85,9 +85,10 @@ const OrderHistoryPage = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '16px', fontWeight: '700' }}>Mã Đơn Hàng</th>
+                <th style={{ padding: '16px', fontWeight: '700' }}>Mã Đơn</th>
                 <th style={{ padding: '16px', fontWeight: '700' }}>Ngày Đặt</th>
                 <th style={{ padding: '16px', fontWeight: '700' }}>Sản Phẩm</th>
+                <th style={{ padding: '16px', fontWeight: '700' }}>Vận Chuyển</th>
                 <th style={{ padding: '16px', fontWeight: '700', textAlign: 'right' }}>Tổng Thanh Toán</th>
                 <th style={{ padding: '16px', fontWeight: '700', textAlign: 'center' }}>Trạng Thái</th>
                 <th style={{ padding: '16px', fontWeight: '700', textAlign: 'center' }}>Thao Tác</th>
@@ -143,6 +144,40 @@ const OrderHistoryPage = () => {
                           <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '12px' }}>Không có thông tin</span>
                         )}
                       </div>
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '13px' }}>
+                      {order.shipping_provider === 'GHN' ? (
+                        <div>
+                          <span style={{ fontWeight: '600', color: '#ea580c' }}>🚚 GHN Express</span>
+                          <div style={{ marginTop: '4px' }}>
+                            {(() => {
+                              const hasRealCode = order.tracking_code && order.tracking_code !== 'GHN_PENDING';
+                              const displayCode = hasRealCode 
+                                ? order.tracking_code 
+                                : `GHN${String(order.id).padStart(6, '0')}`;
+                              
+                              const trackingUrl = hasRealCode 
+                                ? `https://tracking.ghn.vn/order/${displayCode}`
+                                : `https://tracking.ghn.vn/`;
+
+                              return (
+                                <a
+                                  href={trackingUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 'bold', fontSize: '12px' }}
+                                >
+                                  Tra cứu #{displayCode}
+                                </a>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <span style={{ fontWeight: '600', color: '#0284c7' }}>🛵 Đội xe ShopHub</span>
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '16px', fontWeight: 'bold', color: '#ef4444', textAlign: 'right' }}>
                       {Number(totalAmount).toLocaleString('vi-VN')}đ
