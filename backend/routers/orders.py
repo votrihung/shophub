@@ -82,6 +82,7 @@ def update_shipper_order_status(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    # Route dành riêng cho Shipper/Admin thực hiện hoàn thành/giao hàng
     if str(current_user.role).upper() not in ["SHIPPER", "ADMIN"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -116,7 +117,7 @@ def get_all_orders_admin(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # Cho phép cả ADMIN và SHIPPER truy cập
+    # Cho phép cả ADMIN và SHIPPER xem danh sách tổng
     if str(current_user.role).upper() not in ["ADMIN", "SHIPPER"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -313,7 +314,7 @@ async def checkout(
         )
 
         db.add(new_order)
-        db.flush()  # Lấy new_order.id ngay lập tức
+        db.flush()
 
         # 2. Xử lý gán tracking code nếu GHN API chưa trả về hoặc bị lỗi
         if payload.shipping_provider == "GHN":
@@ -433,11 +434,11 @@ def update_order_status(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # CẬP NHẬT: Cho phép cả ADMIN và SHIPPER đổi trạng thái
-    if str(current_user.role).upper() not in ["ADMIN", "SHIPPER"]:
+    # CHỈ DÀNH CHO ADMIN: Quản lý tối cao sửa trạng thái khi cần thiết
+    if str(current_user.role).upper() != "ADMIN":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền thực hiện hành động này.",
+            detail="Chỉ Admin mới có quyền đổi trạng thái trực tiếp tại đây.",
         )
 
     order = db.query(OrderDB).filter(OrderDB.id == order_id).first()
