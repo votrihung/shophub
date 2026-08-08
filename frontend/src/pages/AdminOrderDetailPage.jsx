@@ -9,7 +9,6 @@ const AdminOrderDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('');
   const [adminNote, setAdminNote] = useState('');
   const [updatingItemId, setUpdatingItemId] = useState(null); 
 
@@ -25,7 +24,6 @@ const AdminOrderDetailPage = () => {
       const data = response.data;
       console.log("Order Data Backend Return:", data);
       setOrder(data);
-      setSelectedStatus(data.status || 'PLACED');
       setAdminNote(data.admin_note || data.adminNote || '');
 
       let name = data.customer_name || data.recipient_name || data.receiver_name || data.full_name || data.name || data.user?.full_name || data.user?.name || data.user?.username || data.user?.email || '';
@@ -99,7 +97,7 @@ const AdminOrderDetailPage = () => {
         const fallbackRes = await axios.put(
           `https://shophub-production-c481.up.railway.app/orders/${id}/status`,
           {
-            status: selectedStatus,
+            status: order.status,
             admin_note: adminNote,
             customer_name: customerInfo.name,
             phone: customerInfo.phone,
@@ -120,12 +118,12 @@ const AdminOrderDetailPage = () => {
     }
   };
 
-  const handleUpdateStatus = async () => {
+  const handleSaveAdminNote = async () => {
     setUpdating(true);
     try {
       const token = localStorage.getItem('shophub_token');
       const payload = { 
-        status: selectedStatus, 
+        status: order.status, 
         admin_note: adminNote,
         customer_name: customerInfo.name,
         phone: customerInfo.phone,
@@ -139,30 +137,10 @@ const AdminOrderDetailPage = () => {
       );
       
       setOrder(response.data);
-      setIsEditingCustomer(false);
-      alert("Cập nhật trạng thái và thông tin đơn hàng thành công!");
+      alert("Cập nhật ghi chú đơn hàng thành công!");
     } catch (err) {
       console.error(err);
-      try {
-        const token = localStorage.getItem('shophub_token');
-        const patchRes = await axios.patch(
-          `https://shophub-production-c481.up.railway.app/orders/${id}`,
-          { 
-            status: selectedStatus, 
-            admin_note: adminNote,
-            customer_name: customerInfo.name,
-            phone: customerInfo.phone,
-            shipping_address: customerInfo.address
-          },
-          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-        );
-        setOrder(patchRes.data);
-        setIsEditingCustomer(false);
-        alert("Cập nhật thành công!");
-      } catch (patchErr) {
-        console.error(patchErr);
-        alert(patchErr.response?.data?.detail || err.response?.data?.detail || "Lỗi khi cập nhật đơn hàng.");
-      }
+      alert(err.response?.data?.detail || "Lỗi khi cập nhật ghi chú đơn hàng.");
     } finally {
       setUpdating(false);
     }
@@ -190,7 +168,35 @@ const AdminOrderDetailPage = () => {
     }
   };
 
-  const isOrderClosed = order ? ["COMPLETED", "CANCELED", "CANCELLED"].includes(order.status) : false;
+  const renderStatusBadge = (status) => {
+    const statusMap = {
+      PLACED: { label: 'Chờ xác nhận', bg: '#fef3c7', color: '#d97706' },
+      PROCESSING: { label: 'Đang xử lý', bg: '#e0f2fe', color: '#0284c7' },
+      SHIPPING: { label: 'Đang giao hàng', bg: '#e0e7ff', color: '#4f46e5' },
+      DELIVERED: { label: 'Đã giao (Hoàn thành)', bg: '#dcfce7', color: '#15803d' },
+      COMPLETED: { label: 'Hoàn thành', bg: '#dcfce7', color: '#15803d' },
+      FAILED: { label: 'Giao thất bại', bg: '#fee2e2', color: '#b91c1c' },
+      CANCELED: { label: 'Đã hủy', bg: '#f3f4f6', color: '#4b5563' },
+      CANCELLED: { label: 'Đã hủy', bg: '#f3f4f6', color: '#4b5563' }
+    };
+    const current = statusMap[status] || { label: status, bg: '#f3f4f6', color: '#374151' };
+
+    return (
+      <span style={{
+        backgroundColor: current.bg,
+        color: current.color,
+        padding: '6px 16px',
+        borderRadius: '20px',
+        fontWeight: '700',
+        fontSize: '14px',
+        display: 'inline-block'
+      }}>
+        ● {current.label}
+      </span>
+    );
+  };
+
+  const isOrderClosed = order ? ["COMPLETED", "DELIVERED", "CANCELED", "CANCELLED"].includes(order.status) : false;
 
   if (loading) {
     return (
@@ -229,16 +235,10 @@ const AdminOrderDetailPage = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
-            <option value="PLACED">PLACED (Chờ xác nhận)</option>
-            <option value="PROCESSING">PROCESSING (Đang xử lý)</option>
-            <option value="COMPLETED">COMPLETED (Hoàn thành)</option>
-            <option value="CANCELED">CANCELED (Đã hủy)</option>
-          </select>
-          <button onClick={handleUpdateStatus} disabled={updating} style={{ padding: '8px 16px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: updating ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: updating ? 0.7 : 1 }}>
-            {updating ? 'Đang lưu...' : 'Lưu'}
-          </button>
+        {/* Cập nhật: Ẩn select, thay bằng Badge chỉ xem */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#fff', padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>Trạng thái:</span>
+          {renderStatusBadge(order.status)}
         </div>
       </div>
 
@@ -424,11 +424,11 @@ const AdminOrderDetailPage = () => {
         />
         <div style={{ marginTop: '16px', textAlign: 'right' }}>
           <button 
-            onClick={handleUpdateStatus} 
+            onClick={handleSaveAdminNote} 
             disabled={updating}
             style={{ padding: '10px 24px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: updating ? 'not-allowed' : 'pointer' }}
           >
-            {updating ? 'Đang lưu...' : 'Lưu Thông Tin & Trạng Thái'}
+            {updating ? 'Đang lưu...' : 'Lưu Ghi Chú'}
           </button>
         </div>
       </div>
