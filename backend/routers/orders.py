@@ -33,18 +33,19 @@ class ShipperStatusUpdate(BaseModel):
 
 
 @router.post("/calculate-fee")
+@router.post("/calculate-fee/")
 async def get_ghn_fee(payload: CalculateFeeRequest):
     if not payload.to_district_id or not payload.to_ward_code:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Thiếu thông tin ID Quận/Huyện hoặc Mã Phường/Xã"
+            detail="Thiếu thông tin ID Quận/Huyện hoặc Mã Phường/Xã",
         )
 
     try:
         fee = await calculate_shipping_fee(
-            payload.to_district_id, 
-            str(payload.to_ward_code), 
-            payload.weight
+            payload.to_district_id,
+            str(payload.to_ward_code),
+            payload.weight,
         )
         return {"shipping_fee": fee}
     except Exception as e:
@@ -53,8 +54,8 @@ async def get_ghn_fee(payload: CalculateFeeRequest):
 
 @router.get("/shipper/pending")
 def get_shipper_pending_orders(
-    db: Session = Depends(get_db), 
-    current_user=Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     if str(current_user.role).upper() not in ["SHIPPER", "ADMIN"]:
         raise HTTPException(
@@ -112,8 +113,8 @@ def update_shipper_order_status(
 
 @router.get("/admin/all", response_model=List[OrderRead])
 def get_all_orders_admin(
-    db: Session = Depends(get_db), 
-    current_user=Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     if str(current_user.role).upper() != "ADMIN":
         raise HTTPException(
@@ -140,8 +141,8 @@ def get_all_orders_admin(
 
 @router.get("/history")
 def get_order_history(
-    db: Session = Depends(get_db), 
-    current_user=Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     orders = (
         db.query(OrderDB)
@@ -208,11 +209,15 @@ def vnpay_return(request: Request, db: Session = Depends(get_db)):
     try:
         order_id = int(vnp_txn_ref.split("_")[0])
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mã giao dịch không hợp lệ")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Mã giao dịch không hợp lệ"
+        )
 
     order = db.query(OrderDB).filter(OrderDB.id == order_id).first()
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng"
+        )
 
     if vnp_response_code == "00":
         order.status = "PAID"
@@ -241,7 +246,9 @@ async def checkout(
     current_user=Depends(get_current_user),
 ):
     if not payload.items:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Giỏ hàng trống rỗng!")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Giỏ hàng trống rỗng!"
+        )
 
     try:
         total_amount = 0
@@ -343,8 +350,10 @@ async def checkout(
         payment_method = getattr(payload, "payment_method", "COD")
         if payment_method == "VNPAY":
             x_forwarded_for = http_request.headers.get("X-Forwarded-For")
-            client_ip = x_forwarded_for.split(",")[0] if x_forwarded_for else (
-                http_request.client.host if http_request.client else "127.0.0.1"
+            client_ip = (
+                x_forwarded_for.split(",")[0]
+                if x_forwarded_for
+                else (http_request.client.host if http_request.client else "127.0.0.1")
             )
 
             setattr(
@@ -511,8 +520,9 @@ def create_product_review(
     current_user=Depends(get_current_user),
 ):
     try:
-        purchase_count_result = db.execute(
-            text("""
+        purchase_count_result = (
+            db.execute(
+                text("""
                 SELECT COUNT(*) 
                 FROM orders o
                 JOIN order_items oi ON o.id = oi.order_id
@@ -520,11 +530,13 @@ def create_product_review(
                   AND oi.product_id = :product_id 
                   AND LOWER(o.status) IN ('completed', 'paid', 'delivered')
             """),
-            {
-                "user_id": current_user.id,
-                "product_id": payload.product_id,
-            },
-        ).scalar() or 0
+                {
+                    "user_id": current_user.id,
+                    "product_id": payload.product_id,
+                },
+            ).scalar()
+            or 0
+        )
 
         if purchase_count_result == 0:
             raise HTTPException(
@@ -532,18 +544,21 @@ def create_product_review(
                 detail="Bạn cần mua và nhận hàng thành công mới được đánh giá sản phẩm này!",
             )
 
-        user_review_count = db.execute(
-            text("""
+        user_review_count = (
+            db.execute(
+                text("""
                 SELECT COUNT(*) 
                 FROM reviews 
                 WHERE user_id = :user_id 
                   AND product_id = :product_id
             """),
-            {
-                "user_id": current_user.id,
-                "product_id": payload.product_id,
-            },
-        ).scalar() or 0
+                {
+                    "user_id": current_user.id,
+                    "product_id": payload.product_id,
+                },
+            ).scalar()
+            or 0
+        )
 
         if user_review_count >= purchase_count_result:
             raise HTTPException(
