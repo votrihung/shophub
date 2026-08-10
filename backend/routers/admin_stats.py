@@ -1,5 +1,6 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -69,11 +70,27 @@ def get_overview_stats(
 
 @router.get("/monthly-revenue")
 def get_monthly_revenue(
+    start_date: Optional[str] = Query(None, description="Định dạng YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="Định dạng YYYY-MM-DD"),
     db: Session = Depends(get_db),
     admin = Depends(verify_admin)
 ):
-    orders = db.query(Order).all()
+    # 1. Parse bộ lọc thời gian từ client (nếu có)
+    s_dt, e_dt = None, None
+    if start_date:
+        try:
+            s_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        except ValueError:
+            pass
 
+    if end_date:
+        try:
+            e_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        except ValueError:
+            pass
+
+    # 2. Truy vấn đơn hàng
+    orders = db.query(Order).all()
     daily_map = {}
 
     for order in orders:
@@ -104,15 +121,29 @@ def get_monthly_revenue(
                 dt = datetime.combine(created, datetime.min.time())
 
         if dt:
+            # Lọc theo khoảng ngày người dùng chọn
+            if s_dt and dt < s_dt:
+                continue
+            if e_dt and dt > e_dt:
+                continue
+
             day_str = dt.strftime("%d/%m/%Y")
             daily_map[day_str] = daily_map.get(day_str, 0.0) + float(total)
 
-    # Đảm bảo hiển thị đầy đủ ngày hôm nay (10/08/2026) trên biểu đồ
-    today_str = datetime.now().strftime("%d/%m/%Y")
-    if today_str not in daily_map:
+    # 3. Đảm bảo hiển thị ngày hôm nay (10/08/2026) nếu không bị bộ lọc ẩn đi
+    now = datetime.now()
+    today_str = now.strftime("%d/%m/%Y")
+    
+    is_today_in_range = True
+    if s_dt and now < s_dt:
+        is_today_in_range = False
+    if e_dt and now > e_dt:
+        is_today_in_range = False
+
+    if is_today_in_range and today_str not in daily_map:
         daily_map[today_str] = 0.0
 
-    # Sắp xếp các mốc ngày theo thứ tự thời gian tăng dần
+    # 4. Sắp xếp mốc thời gian tăng dần
     sorted_days = sorted(
         daily_map.keys(),
         key=lambda x: datetime.strptime(x, "%d/%m/%Y")
