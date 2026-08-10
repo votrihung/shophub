@@ -70,22 +70,22 @@ def get_overview_stats(
 
 @router.get("/monthly-revenue")
 def get_monthly_revenue(
-    start_date: Optional[str] = Query(None, description="Định dạng YYYY-MM-DD"),
-    end_date: Optional[str] = Query(None, description="Định dạng YYYY-MM-DD"),
     db: Session = Depends(get_db),
-    admin = Depends(verify_admin)
+    admin = Depends(verify_admin),
+    start_date: Optional[str] = Query(None, description="Định dạng YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="Định dạng YYYY-MM-DD")
 ):
-    # 1. Parse bộ lọc thời gian từ client (nếu có)
+    # 1. Parse bộ lọc thời gian từ client (xử lý chuỗi rỗng an toàn)
     s_dt, e_dt = None, None
-    if start_date:
+    if start_date and start_date.strip():
         try:
-            s_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            s_dt = datetime.strptime(start_date.strip(), "%Y-%m-%d")
         except ValueError:
             pass
 
-    if end_date:
+    if end_date and end_date.strip():
         try:
-            e_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            e_dt = datetime.strptime(end_date.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
         except ValueError:
             pass
 
@@ -130,7 +130,7 @@ def get_monthly_revenue(
             day_str = dt.strftime("%d/%m/%Y")
             daily_map[day_str] = daily_map.get(day_str, 0.0) + float(total)
 
-    # 3. Đảm bảo hiển thị ngày hôm nay (10/08/2026) nếu không bị bộ lọc ẩn đi
+    # 3. Đảm bảo hiển thị ngày hôm nay nếu nằm trong khoảng lọc
     now = datetime.now()
     today_str = now.strftime("%d/%m/%Y")
     
