@@ -1,6 +1,7 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func
 
 from database import get_db
 
@@ -23,6 +24,11 @@ def _get_model_attr(module, possible_names):
 Product = _get_model_attr(product_model, ["Product", "ProductDB", "product"])
 Order = _get_model_attr(order_model, ["Order", "OrderDB", "order"])
 User = _get_model_attr(user_model, ["User", "UserDB", "user"])
+
+VALID_REVENUE_STATUSES = [
+    "completed", "paid", "success", "delivered",
+    "pending", "processing", "chờ xử lý", "chờ thanh toán", "new", "created"
+]
 
 
 def verify_admin(current_user = Depends(get_current_user)):
@@ -48,7 +54,7 @@ def get_overview_stats(
     total_orders = db.query(func.count(Order.id)).scalar() or 0
     
     total_revenue = db.query(func.sum(Order.total_amount)).filter(
-        func.lower(Order.status) == "completed"
+        func.lower(Order.status).in_(VALID_REVENUE_STATUSES)
     ).scalar() or 0.0
 
     total_users = db.query(func.count(User.id)).scalar() or 0
@@ -66,29 +72,56 @@ def get_monthly_revenue(
     db: Session = Depends(get_db),
     admin = Depends(verify_admin)
 ):
+    orders = db.query(Order).all()
+
+    daily_map = {}
+
+    for order in orders:
+        created = getattr(order, "created_at", None)
+        total = getattr(order, "total_amount", 0) or 0
+
+        if not created:
+            continue
+
+        dt = None
+        if isinstance(created, datetime):
+            dt = created
+        elif isinstance(created, str):
+            clean_str = created.replace("Z", "").split(".")[0].strip()
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"):
+                try:
+                    dt = datetime.strptime(clean_str, fmt)
+                    break
+                except ValueError:
+                    continue
+            if not dt:
+                try:
+                    dt = datetime.fromisoformat(clean_str)
+                except ValueError:
+                    continue
+        else:
+            if hasattr(created, "year"):
+                dt = datetime.combine(created, datetime.min.time())
+
+        if dt:
+            day_str = dt.strftime("%d/%m/%Y")
+            daily_map[day_str] = daily_map.get(day_str, 0.0) + float(total)
+
+    # Đảm bảo hiển thị đầy đủ ngày hôm nay (10/08/2026) trên biểu đồ
+    today_str = datetime.now().strftime("%d/%m/%Y")
+    if today_str not in daily_map:
+        daily_map[today_str] = 0.0
+
+    # Sắp xếp các mốc ngày theo thứ tự thời gian tăng dần
+    sorted_days = sorted(
+        daily_map.keys(),
+        key=lambda x: datetime.strptime(x, "%d/%m/%Y")
+    )
     
-    results = db.query(
-        extract('year', Order.created_at).label('year'),
-        extract('month', Order.created_at).label('month'),
-        extract('day', Order.created_at).label('day'),
-        func.sum(Order.total_amount).label('revenue')
-    ).filter(
-        func.lower(Order.status) == "completed"
-    ).group_by('year', 'month', 'day').order_by('year', 'month', 'day').all()
-
-    days = []
-    revenues = []
-
-    for r in results:
-        year = int(r.year)
-        month = int(r.month)
-        day = int(r.day)
-
-        days.append(f"{day:02d}/{month:02d}/{year}")
-        revenues.append(round(float(r.revenue or 0), 2))
+    revenues = [round(daily_map[day], 2) for day in sorted_days]
 
     return {
-        "months": days,  
-        "days": days,
+        "months": sorted_days,  
+        "days": sorted_days,
         "revenues": revenues
     }
